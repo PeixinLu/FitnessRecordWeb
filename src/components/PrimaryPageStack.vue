@@ -144,11 +144,16 @@ onBeforeUnmount(clearRecallFallback)
       ref="stackFab"
       type="button"
       class="stack-fab"
+      :class="{ stacked: stackState.isStacked }"
       :aria-label="stackState.isStacked ? '恢复当前页面' : '显示页面堆栈'"
       :aria-expanded="stackState.isStacked"
       @click="toggleStackMode"
     >
-      <span class="stack-fab-icon" :class="{ up: stackState.isStacked }" aria-hidden="true" />
+      <span class="stack-tabs-icon" aria-hidden="true">
+        <span class="stack-tabs-icon-back" />
+        <span class="stack-tabs-icon-front" />
+      </span>
+      <span class="stack-back-icon" aria-hidden="true" />
     </button>
   </section>
 </template>
@@ -225,49 +230,85 @@ onBeforeUnmount(clearRecallFallback)
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 50%;
-  background: #1a1a1a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 8px 28px rgba(31, 31, 35, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  color: #3a3a3c;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition:
+    opacity 0.3s ease,
+    background-color 0.3s ease,
+    transform 0.3s ease;
 }
 
-.stack-fab-icon {
-  position: relative;
-  width: 24px;
-  height: 24px;
+.stack-fab.stacked {
+  background: rgba(255, 255, 255, 0.74);
+  opacity: 0.82;
 }
 
-.stack-fab-icon::before,
-.stack-fab-icon::after {
+.stack-tabs-icon,
+.stack-back-icon {
   position: absolute;
-  left: 50%;
-  width: 10px;
-  height: 10px;
-  border-right: 2px solid currentColor;
+  transition:
+    opacity 0.25s ease,
+    transform 0.3s ease;
+}
+
+.stack-tabs-icon {
+  width: 25px;
+  height: 25px;
+  opacity: 1;
+}
+
+.stack-tabs-icon-back,
+.stack-tabs-icon-front {
+  position: absolute;
+  width: 17px;
+  height: 19px;
+  border: 1.8px solid currentColor;
+  border-radius: 4px;
+}
+
+.stack-tabs-icon-back {
+  top: 2px;
+  left: 2px;
+  opacity: 0.62;
+}
+
+.stack-tabs-icon-front {
+  right: 2px;
+  bottom: 2px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.stack-back-icon {
+  width: 13px;
+  height: 13px;
   border-bottom: 2px solid currentColor;
-  content: '';
-  transform: translateX(-50%) rotate(45deg);
-  transition: transform 0.3s;
+  border-left: 2px solid currentColor;
+  opacity: 0;
+  transform: translateX(4px) rotate(45deg);
 }
 
-.stack-fab-icon::before {
-  top: 0;
+.stack-fab.stacked .stack-tabs-icon {
+  opacity: 0;
+  transform: scale(0.82);
 }
 
-.stack-fab-icon::after {
-  top: 6px;
-}
-
-.stack-fab-icon.up::before,
-.stack-fab-icon.up::after {
-  transform: translateX(-50%) rotate(-135deg);
+.stack-fab.stacked .stack-back-icon {
+  opacity: 1;
+  transform: translateX(2px) rotate(45deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .stack-card,
-  .stack-fab-icon::before,
-  .stack-fab-icon::after {
+  .stack-fab,
+  .stack-tabs-icon,
+  .stack-back-icon {
     transition-duration: 0.01ms !important;
   }
 }
