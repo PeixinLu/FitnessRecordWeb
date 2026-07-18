@@ -1,87 +1,103 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useExerciseStore } from '@/stores/exercise'
-import { useRecordStore } from '@/stores/record'
-import { showConfirmDialog, showToast } from 'vant'
-import EquipmentDrawer from '@/components/EquipmentDrawer.vue'
-import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
-import { getEquipmentIcon } from '@/utils/equipmentIcon'
-import { groupRecordsByExercise, summarizeWorkoutSets, type WorkoutGroup } from '@/utils/workoutGroups'
-import WorkoutDetail from '@/views/WorkoutDetail.vue'
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useExerciseStore } from "@/stores/exercise";
+import { useRecordStore } from "@/stores/record";
+import { showConfirmDialog, showToast } from "vant";
+import EquipmentDrawer from "@/components/EquipmentDrawer.vue";
+import PrimaryPageTitle from "@/components/PrimaryPageTitle.vue";
+import { getEquipmentIcon } from "@/utils/equipmentIcon";
+import {
+  groupRecordsByExercise,
+  summarizeWorkoutSets,
+  type WorkoutGroup,
+} from "@/utils/workoutGroups";
+import WorkoutDetail from "@/views/WorkoutDetail.vue";
 
-const exerciseStore = useExerciseStore()
-const recordStore = useRecordStore()
-const router = useRouter()
+const exerciseStore = useExerciseStore();
+const recordStore = useRecordStore();
+const router = useRouter();
 
 // 抽屉状态
-const showDrawer = ref(false)
-const selectedEquipmentId = ref<string>('')
-const showWorkoutDetail = ref(false)
-const selectedWorkoutExerciseId = ref('')
-const isEquipmentCollapsed = ref(false)
-const isNestedDrawerOpen = ref(false)
-const isSecondaryPageOpen = computed(() => showDrawer.value || showWorkoutDetail.value)
+const showDrawer = ref(false);
+const selectedEquipmentId = ref<string>("");
+const showWorkoutDetail = ref(false);
+const selectedWorkoutExerciseId = ref("");
+const isEquipmentCollapsed = ref(false);
+const isNestedDrawerOpen = ref(false);
+const isSecondaryPageOpen = computed(
+  () => showDrawer.value || showWorkoutDetail.value,
+);
 
 // ===== 器械九宫格 =====
-const equipmentPage = ref(0)
-const equipmentPageSize = 6 // 每页6个（2行×3列）
+const equipmentPage = ref(0);
+const equipmentPageSize = 6; // 每页6个（2行×3列）
 const equipmentPages = computed(() => {
-  const pages: Array<typeof exerciseStore.equipments> = []
-  const all = exerciseStore.equipments
+  const pages: Array<typeof exerciseStore.equipments> = [];
+  const all = exerciseStore.equipments;
   for (let i = 0; i < all.length; i += equipmentPageSize) {
-    pages.push(all.slice(i, i + equipmentPageSize))
+    pages.push(all.slice(i, i + equipmentPageSize));
   }
-  return pages
-})
+  return pages;
+});
 
 function onEquipmentClick(equipmentId: string) {
-  if (!hasExercises(equipmentId)) return
-  selectedEquipmentId.value = equipmentId
-  showDrawer.value = true
+  if (!hasExercises(equipmentId)) return;
+  selectedEquipmentId.value = equipmentId;
+  showDrawer.value = true;
 }
 
 function hasExercises(equipmentId: string): boolean {
-  return exerciseStore.exercises.some(exercise => exercise.equipmentId === equipmentId)
+  return exerciseStore.exercises.some(
+    (exercise) => exercise.equipmentId === equipmentId,
+  );
 }
 
 function onEquipmentPageChange(page: number) {
-  equipmentPage.value = page
+  equipmentPage.value = page;
 }
 
 function onRecordsScroll(event: Event) {
-  isEquipmentCollapsed.value = (event.target as HTMLElement).scrollTop > 8
+  isEquipmentCollapsed.value = (event.target as HTMLElement).scrollTop > 8;
 }
 
 // ===== 今日记录 =====
 const todayRecords = computed(() => {
-  const today = recordStore.getTodayDate()
+  const today = recordStore.getTodayDate();
   return recordStore.records
-    .filter(r => r.date === today)
-    .sort((a, b) => b.createdAt - a.createdAt) // 最新在上
-})
+    .filter((r) => r.date === today)
+    .sort((a, b) => b.createdAt - a.createdAt); // 最新在上
+});
 
-const todayWorkoutGroups = computed(() => groupRecordsByExercise(todayRecords.value))
+const todayWorkoutGroups = computed(() =>
+  groupRecordsByExercise(todayRecords.value),
+);
 
 function getGroupEquipmentIcon(group: WorkoutGroup): string | undefined {
-  const exercise = exerciseStore.exercises.find(item => item.id === group.exerciseId)
-  const equipment = exerciseStore.equipments.find(item => item.id === exercise?.equipmentId)
-  return getEquipmentIcon(equipment?.icon)
+  const exercise = exerciseStore.exercises.find(
+    (item) => item.id === group.exerciseId,
+  );
+  const equipment = exerciseStore.equipments.find(
+    (item) => item.id === exercise?.equipmentId,
+  );
+  return getEquipmentIcon(equipment?.icon);
 }
 
 function openWorkoutDetail(exerciseId: string) {
-  selectedWorkoutExerciseId.value = exerciseId
-  showWorkoutDetail.value = true
+  selectedWorkoutExerciseId.value = exerciseId;
+  showWorkoutDetail.value = true;
 }
 
 async function deleteWorkoutGroup(group: WorkoutGroup) {
   try {
     await showConfirmDialog({
-      title: '删除训练',
+      title: "删除训练",
       message: `确定删除「${group.exerciseName}」的${group.records.length}组记录吗？`,
-    })
-    await Promise.all(group.records.map(record => recordStore.deleteRecord(record.id)))
-    showToast('已删除')
+    });
+    await Promise.all(
+      group.records.map((record) => recordStore.deleteRecord(record.id)),
+    );
+    showToast("已删除");
   } catch {
     // 用户取消
   }
@@ -89,27 +105,41 @@ async function deleteWorkoutGroup(group: WorkoutGroup) {
 
 // 抽屉关闭
 function onDrawerClose() {
-  showDrawer.value = false
+  showDrawer.value = false;
 }
 
 // 记录保存成功
 function onRecordSaved() {
-  showDrawer.value = false
+  showDrawer.value = false;
 }
 </script>
 
 <template>
-  <div class="home-page" :class="{ 'secondary-page-open': isSecondaryPageOpen, 'nested-secondary-page-open': isSecondaryPageOpen && isNestedDrawerOpen }">
+  <div
+    class="home-page"
+    :class="{
+      'secondary-page-open': isSecondaryPageOpen,
+      'nested-secondary-page-open': isSecondaryPageOpen && isNestedDrawerOpen,
+    }"
+  >
     <PrimaryPageTitle title="记录" />
 
     <!-- 器械九宫格（固定） -->
-    <section class="equipment-section" :class="{ collapsed: isEquipmentCollapsed }">
+    <section
+      class="equipment-section"
+      :class="{ collapsed: isEquipmentCollapsed }"
+    >
       <van-empty
         v-if="equipmentPages.length === 0"
         image="search"
         description="还没有常用器械"
       >
-        <van-button type="primary" size="small" @click="router.push('/equipment-management')">去添加器械</van-button>
+        <van-button
+          type="primary"
+          size="small"
+          @click="router.push('/equipment-management')"
+          >去添加器械</van-button
+        >
       </van-empty>
       <van-swipe
         v-else
@@ -118,7 +148,10 @@ function onRecordSaved() {
         class="equipment-swipe"
         @change="onEquipmentPageChange"
       >
-        <van-swipe-item v-for="(page, pageIndex) in equipmentPages" :key="pageIndex">
+        <van-swipe-item
+          v-for="(page, pageIndex) in equipmentPages"
+          :key="pageIndex"
+        >
           <div class="equipment-grid">
             <div
               v-for="equipment in page"
@@ -160,12 +193,21 @@ function onRecordSaved() {
       </div>
 
       <div class="records-list">
-        <van-empty v-if="todayWorkoutGroups.length === 0" description="还没有训练记录，点击上方器械开始" />
+        <van-empty
+          v-if="todayWorkoutGroups.length === 0"
+          description="还没有训练记录，点击上方器械开始"
+        />
 
-        <van-swipe-cell v-for="group in todayWorkoutGroups" :key="group.exerciseId">
+        <van-swipe-cell
+          v-for="group in todayWorkoutGroups"
+          :key="group.exerciseId"
+        >
           <div class="record-item" @click="openWorkoutDetail(group.exerciseId)">
             <div v-if="getGroupEquipmentIcon(group)" class="record-icon">
-              <img :src="getGroupEquipmentIcon(group)" :alt="`${group.exerciseName}器械图标`" />
+              <img
+                :src="getGroupEquipmentIcon(group)"
+                :alt="`${group.exerciseName}器械图标`"
+              />
             </div>
             <div v-else class="record-icon">🏋️</div>
             <div class="record-info">
@@ -177,7 +219,12 @@ function onRecordSaved() {
             <van-icon name="arrow" color="#8e8e93" />
           </div>
           <template #right>
-            <van-button class="delete-group-button" type="danger" text="删除" @click="deleteWorkoutGroup(group)" />
+            <van-button
+              class="delete-group-button"
+              type="danger"
+              text="删除"
+              @click="deleteWorkoutGroup(group)"
+            />
           </template>
         </van-swipe-cell>
       </div>
@@ -192,7 +239,22 @@ function onRecordSaved() {
       @nested-editor-open="isNestedDrawerOpen = $event"
     />
 
-    <van-popup v-model:show="showWorkoutDetail" teleport="body" position="bottom" round :style="{ width: 'calc(100% - 16px)', left: '8px', bottom: '8px', height: '80%', borderRadius: '24px', background: 'transparent', '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)', '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)' }">
+    <van-popup
+      v-model:show="showWorkoutDetail"
+      teleport="body"
+      position="bottom"
+      round
+      :style="{
+        width: 'calc(100% - 16px)',
+        left: '8px',
+        bottom: '8px',
+        height: '80%',
+        borderRadius: '24px',
+        background: 'transparent',
+        '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
+      }"
+    >
       <WorkoutDetail
         embedded
         :date="recordStore.getTodayDate()"
@@ -218,7 +280,6 @@ function onRecordSaved() {
 /* ===== 器械区域 ===== */
 .equipment-section {
   padding: 6px 16px 8px;
-  background: rgba(255, 255, 255, 0.76);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
@@ -247,7 +308,7 @@ function onRecordSaved() {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  background: #f5f5f7;
+  background: rgba(255, 255, 255, 0.76);
   border-radius: 14px;
   padding: 8px;
   min-height: 0;
@@ -284,7 +345,8 @@ function onRecordSaved() {
   width: 34px;
   height: 34px;
   object-fit: contain;
-  filter: invert(46%) sepia(92%) saturate(2835%) hue-rotate(194deg) brightness(102%) contrast(101%);
+  filter: invert(46%) sepia(92%) saturate(2835%) hue-rotate(194deg)
+    brightness(102%) contrast(101%);
 }
 
 .equipment-name {
@@ -412,7 +474,8 @@ function onRecordSaved() {
   width: 28px;
   height: 28px;
   object-fit: contain;
-  filter: invert(46%) sepia(92%) saturate(2835%) hue-rotate(194deg) brightness(102%) contrast(101%);
+  filter: invert(46%) sepia(92%) saturate(2835%) hue-rotate(194deg)
+    brightness(102%) contrast(101%);
 }
 
 .record-info {
