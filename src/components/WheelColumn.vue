@@ -161,7 +161,7 @@ onMounted(() => {
     @touchcancel="onTouchEnd"
   >
     <!-- 高亮遮罩 -->
-    <div class="highlight-bar"></div>
+    <div v-smooth-corners="8" class="highlight-bar"></div>
 
     <div class="wheel-inner" :style="{ transform: `translateY(${offset}px)` }">
       <div v-for="n in list" :key="n" class="wheel-item">

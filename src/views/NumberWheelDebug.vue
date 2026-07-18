@@ -18,7 +18,7 @@ const fourText = computed(() => JSON.stringify(fourValue.value))
       <p>触摸上下滑动单列；桌面端将鼠标悬停到某列后滚动鼠标滚轮。</p>
     </header>
 
-    <section class="debug-section">
+    <section v-smooth-corners="8" class="debug-section">
       <div class="section-title">
         <h2>训练参数</h2>
         <code>{{ workoutText }}</code>
@@ -31,7 +31,7 @@ const fourText = computed(() => JSON.stringify(fourValue.value))
       />
     </section>
 
-    <section class="debug-section">
+    <section v-smooth-corners="8" class="debug-section">
       <div class="section-title">
         <h2>单滚轮边界</h2>
         <code>{{ singleText }}</code>
@@ -44,7 +44,7 @@ const fourText = computed(() => JSON.stringify(fourValue.value))
       />
     </section>
 
-    <section class="debug-section">
+    <section v-smooth-corners="8" class="debug-section">
       <div class="section-title">
         <h2>四滚轮上限</h2>
         <code>{{ fourText }}</code>

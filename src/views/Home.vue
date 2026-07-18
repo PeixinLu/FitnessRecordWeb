@@ -156,6 +156,7 @@ function onRecordSaved() {
             <div
               v-for="equipment in page"
               :key="equipment.id"
+              v-smooth-corners="14"
               class="equipment-card"
               :class="{ disabled: !hasExercises(equipment.id) }"
               @click="onEquipmentClick(equipment.id)"
@@ -202,14 +203,14 @@ function onRecordSaved() {
           v-for="group in todayWorkoutGroups"
           :key="group.exerciseId"
         >
-          <div class="record-item" @click="openWorkoutDetail(group.exerciseId)">
-            <div v-if="getGroupEquipmentIcon(group)" class="record-icon">
+          <div v-smooth-corners="12" class="record-item" @click="openWorkoutDetail(group.exerciseId)">
+            <div v-if="getGroupEquipmentIcon(group)" v-smooth-corners="10" class="record-icon">
               <img
                 :src="getGroupEquipmentIcon(group)"
                 :alt="`${group.exerciseName}器械图标`"
               />
             </div>
-            <div v-else class="record-icon">🏋️</div>
+            <div v-else v-smooth-corners="10" class="record-icon">🏋️</div>
             <div class="record-info">
               <div class="record-name">{{ group.exerciseName }}</div>
               <div class="record-detail">
@@ -220,6 +221,7 @@ function onRecordSaved() {
           </div>
           <template #right>
             <van-button
+              v-smooth-corners="12"
               class="delete-group-button"
               type="danger"
               text="删除"
@@ -241,9 +243,11 @@ function onRecordSaved() {
 
     <van-popup
       v-model:show="showWorkoutDetail"
+      v-smooth-corners="24"
       teleport="body"
       position="bottom"
       round
+      :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
       :style="{
         width: 'calc(100% - 16px)',
         left: '8px',

@@ -226,17 +226,19 @@ watch(
       @touchcancel="onTouchEnd(index)"
       @wheel="onWheel(index, $event)"
     >
-      <div class="number-wheel-highlight"></div>
-      <div
-        class="number-wheel-track"
-        :class="{ animating: animatingColumns.has(index) }"
-        :style="{ transform: `translateY(${states[index]?.offset ?? 0}px)` }"
-      >
-        <div v-for="value in column.values" :key="value" class="number-wheel-item">
-          {{ value }}
+      <div class="number-wheel-visual">
+        <div class="number-wheel-highlight"></div>
+        <div
+          class="number-wheel-track"
+          :class="{ animating: animatingColumns.has(index) }"
+          :style="{ transform: `translateY(${states[index]?.offset ?? 0}px)` }"
+        >
+          <div v-for="value in column.values" :key="value" class="number-wheel-item">
+            {{ value }}
+          </div>
         </div>
+        <span class="number-wheel-unit">{{ column.unit }}</span>
       </div>
-      <span class="number-wheel-unit">{{ column.unit }}</span>
     </div>
   </div>
 </template>
@@ -246,7 +248,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 4px;
   height: calc(40px * var(--visible-items));
   user-select: none;
 }
@@ -255,9 +257,35 @@ watch(
   position: relative;
   width: 76px;
   height: 100%;
-  overflow: hidden;
   touch-action: none;
   cursor: ns-resize;
+}
+
+/* 边缘列触摸热区向外扩展，覆盖两侧留白 */
+.number-wheel-column:first-child::before,
+.number-wheel-column:last-child::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 200px;
+}
+
+.number-wheel-column:first-child::before {
+  right: 100%;
+}
+
+.number-wheel-column:last-child::after {
+  left: 100%;
+}
+
+/* 视觉容器 - 居中、定宽，承载渐变遮罩和溢位裁剪 */
+.number-wheel-visual {
+  position: relative;
+  width: 76px;
+  height: 100%;
+  margin: 0 auto;
+  overflow: hidden;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,

@@ -27,7 +27,12 @@ const emit = defineEmits<{
 const editingId = ref('')
 const showEditor = ref(false)
 const editingValues = ref<TemplateValues>({ reps: 12, sets: 1, weight: 0, duration: 30, distance: 1 })
+const originalValues = ref<TemplateValues>({ reps: 12, sets: 1, weight: 0, duration: 30, distance: 1 })
 const detailFields = computed(() => props.fields.filter(field => field.key !== 'sets'))
+
+const hasChanges = computed(() =>
+  detailFields.value.some(field => editingValues.value[field.key] !== originalValues.value[field.key])
+)
 
 watch(showEditor, visible => emit('editor-visibility', visible))
 const editValue = computed<number[]>({
@@ -43,7 +48,9 @@ const editValue = computed<number[]>({
 
 function openEditor(detail: EditableSetDetail) {
   editingId.value = detail.id
-  editingValues.value = { reps: 12, sets: 1, weight: 0, duration: 30, distance: 1, ...detail }
+  const initial = { reps: 12, sets: 1, weight: 0, duration: 30, distance: 1, ...detail }
+  editingValues.value = { ...initial }
+  originalValues.value = { ...initial }
   showEditor.value = true
 }
 
@@ -60,24 +67,22 @@ function saveEditor() {
 <template>
   <section class="sets-section">
     <van-swipe-cell v-for="(detail, index) in sets" :key="detail.id">
-      <div class="set-item" @click="openEditor(detail)">
+      <div v-smooth-corners="12" class="set-item" @click="openEditor(detail)">
         <span class="set-label">第{{ index + 1 }}组</span>
         <span class="set-detail">{{ formatRecordDetail({ sets: 1, ...detail }) }}</span>
         <van-icon name="edit" class="edit-icon" />
       </div>
       <template #right>
-        <van-button class="delete-set-button" type="danger" text="删除" @click="emit('delete', detail.id)" />
+        <van-button v-smooth-corners="12" class="delete-set-button" type="danger" text="删除" @click="emit('delete', detail.id)" />
       </template>
     </van-swipe-cell>
     <van-empty v-if="sets.length === 0" description="没有组数据" />
   </section>
 
-  <van-popup v-model:show="showEditor" teleport="body" position="bottom" round :style="{ width: 'calc(100% - 16px)', left: '8px', bottom: '8px', height: '60%', borderRadius: '24px', '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)', '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)' }">
+  <van-popup v-model:show="showEditor" v-smooth-corners="24" teleport="body" position="bottom" round :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }" :style="{ width: 'calc(100% - 16px)', left: '8px', bottom: '8px', height: '60%', borderRadius: '24px', '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)', '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)' }">
     <div class="edit-set-popup">
       <header class="edit-header">
-        <button class="edit-cancel" @click="showEditor = false">取消</button>
         <h3 class="edit-title">编辑组别</h3>
-        <button class="edit-save" @click="saveEditor">保存</button>
       </header>
       <div class="edit-wheels">
         <NumberWheelPicker
@@ -87,6 +92,10 @@ function saveEditor() {
           :ranges="detailFields.map(field => field.range)"
         />
       </div>
+      <footer class="edit-footer">
+        <button class="edit-cancel" @click="showEditor = false">取消</button>
+        <button class="edit-save" :class="{ show: hasChanges }" @click="saveEditor">保存</button>
+      </footer>
     </div>
   </van-popup>
 </template>
@@ -98,11 +107,44 @@ function saveEditor() {
 .set-detail { font-size: 14px; color: #8e8e93; }
 .edit-icon { color: #007aff; }
 .delete-set-button { height: 100%; min-height: 100%; margin-left: 8px; padding: 0 22px; border-radius: 12px; }
-.edit-set-popup { height: 100%; display: flex; flex-direction: column; background: #fff; }
-.edit-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f5f5f7; }
+.edit-set-popup { height: 100%; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+.edit-header { display: flex; align-items: center; justify-content: center; padding: 16px 20px; border-bottom: 1px solid #f5f5f7; }
 .edit-title { margin: 0; font-size: 17px; font-weight: 600; color: #1c1c1e; }
-.edit-cancel, .edit-save { padding: 8px; border: 0; background: none; font-size: 16px; cursor: pointer; }
-.edit-cancel { color: #8e8e93; }
-.edit-save { color: #007aff; font-weight: 500; }
-.edit-wheels { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 16px; }
+.edit-wheels { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 16px; overflow: hidden; }
+.edit-footer { display: flex; gap: 12px; padding: 16px 20px 24px; border-top: 1px solid #f5f5f7; }
+.edit-cancel { flex: 1; padding: 12px 24px; border: 0; border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; background: #f5f5f7; color: #8e8e93; }
+.edit-save {
+  flex: 0;
+  max-width: 0;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #007aff;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    flex 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease-out;
+}
+.edit-save.show {
+  flex: 1;
+  max-width: 160px;
+  padding: 12px 24px;
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .edit-set-popup { background: #2c2c2e; }
+  .edit-title { color: #fff; }
+  .edit-header, .edit-footer { border-color: #3a3a3c; }
+  .edit-cancel { background: #3a3a3c; }
+  .edit-save { background: #0a84ff; }
+}
 </style>

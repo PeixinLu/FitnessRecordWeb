@@ -153,6 +153,7 @@ function getMuscleGroup(exerciseId: string): string {
         <template v-for="(day, index) in calendarDays" :key="index">
           <div
             v-if="day"
+            v-smooth-corners="8"
             class="day-cell"
             :class="{ 'has-record': hasRecord(day.date), 'is-today': day.isToday, 'is-selected': day.date === selectedDate }"
             @click="onSelectDate(day.dateObj)"
@@ -160,7 +161,7 @@ function getMuscleGroup(exerciseId: string): string {
             {{ day.dayNum }}
             <div v-if="hasRecord(day.date)" class="record-dot"></div>
           </div>
-          <div v-else class="day-cell empty"></div>
+          <div v-else v-smooth-corners="8" class="day-cell empty"></div>
         </template>
       </div>
       </van-cell-group>

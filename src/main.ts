@@ -10,10 +10,15 @@ import 'vant/lib/index.css'
 // 样式
 import './style.css'
 
+// 自定义指令
+import { vSmoothCorners } from './directives/smoothCorners'
+
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
 app.use(vant)
+
+app.directive('smooth-corners', vSmoothCorners)
 
 app.mount('#app')
