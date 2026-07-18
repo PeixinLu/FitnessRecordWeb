@@ -66,3 +66,33 @@ test('primary pages reserve safe scrolling space beneath the stack FAB', async (
   assert.match(sources[0], /\.home-page\s*\{[^}]*height:\s*100%/m)
   assert.doesNotMatch(sources[0], /\.home-page\s*\{[^}]*height:\s*100vh/m)
 })
+
+test('primary views share large page titles and Home removes its date timeline', async () => {
+  const [titleSource, home, calendar, statistics, settings] = await Promise.all([
+    readFile(path.resolve('src/components/PrimaryPageTitle.vue'), 'utf8').catch(() => ''),
+    ...['Home', 'Calendar', 'Statistics', 'Settings'].map(name =>
+      readFile(path.resolve(`src/views/${name}.vue`), 'utf8'),
+    ),
+  ])
+
+  assert.match(titleSource, /defineProps<\{ title: string \}>\(\)/)
+  assert.match(titleSource, /<h1 class="primary-page-title">\{\{ title \}\}<\/h1>/)
+  assert.match(titleSource, /font-size:\s*34px/)
+  assert.match(titleSource, /line-height:\s*41px/)
+  assert.match(titleSource, /font-weight:\s*700/)
+  assert.match(titleSource, /padding:\s*18px 20px 10px/)
+
+  for (const [source, title] of [
+    [home, '记录'],
+    [calendar, '日历'],
+    [statistics, '统计'],
+    [settings, '设置'],
+  ]) {
+    assert.match(source, /import PrimaryPageTitle from '@\/components\/PrimaryPageTitle\.vue'/)
+    assert.ok(source.includes(`<PrimaryPageTitle title="${title}" />`))
+  }
+
+  assert.doesNotMatch(home, /class="date-section"/)
+  assert.doesNotMatch(home, /onDateTouch(Start|Move|End)/)
+  assert.doesNotMatch(home, /dateScrollX|dateStartX|isDragging/)
+})

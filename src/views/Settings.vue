@@ -3,6 +3,7 @@ import { useRecordStore } from '@/stores/record'
 import { useExerciseStore } from '@/stores/exercise'
 import { showToast } from 'vant'
 import { formatRecordDetail } from '@/utils/dataTemplate'
+import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
 
 const recordStore = useRecordStore()
 const exerciseStore = useExerciseStore()
@@ -73,7 +74,10 @@ import { showConfirmDialog } from 'vant'
 
 <template>
   <div class="settings-page">
-    <van-cell-group inset title="导出数据">
+    <PrimaryPageTitle title="设置" />
+
+    <div class="primary-page-body">
+      <van-cell-group inset title="导出数据">
       <van-cell title="导出 JSON" is-link @click="exportJSON">
         <template #icon>
           <van-icon name="description" />
@@ -89,9 +93,9 @@ import { showConfirmDialog } from 'vant'
           <van-icon name="notes-o" />
         </template>
       </van-cell>
-    </van-cell-group>
+      </van-cell-group>
 
-    <van-cell-group inset title="数据管理">
+      <van-cell-group inset title="数据管理">
       <van-cell title="器械动作管理" is-link to="/equipment-management">
         <template #icon>
           <van-icon name="records-o" />
@@ -103,26 +107,31 @@ import { showConfirmDialog } from 'vant'
           <van-icon name="delete-o" color="#ee0a24" />
         </template>
       </van-cell>
-    </van-cell-group>
+      </van-cell-group>
 
-    <van-cell-group inset title="关于">
+      <van-cell-group inset title="关于">
       <van-cell title="版本" value="1.0.0" />
       <van-cell title="作者" value="Fitness Record" />
-    </van-cell-group>
+      </van-cell-group>
 
-    <van-cell-group inset title="调试">
+      <van-cell-group inset title="调试">
       <van-cell title="数字滚轮调试" is-link to="/debug/number-wheel">
         <template #icon>
           <van-icon name="setting-o" />
         </template>
       </van-cell>
-    </van-cell-group>
+      </van-cell-group>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .settings-page {
-  padding: 16px;
+  padding: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.primary-page-body {
+  padding: 0 16px;
 }
 </style>

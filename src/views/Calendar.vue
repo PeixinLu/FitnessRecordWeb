@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRecordStore } from '@/stores/record'
 import { useExerciseStore } from '@/stores/exercise'
 import { formatRecordDetail } from '@/utils/dataTemplate'
+import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
 
 const recordStore = useRecordStore()
 const exerciseStore = useExerciseStore()
@@ -120,8 +121,11 @@ function getMuscleGroup(exerciseId: string): string {
 
 <template>
   <div class="calendar-page">
-    <!-- 月份导航 -->
-    <van-cell-group inset>
+    <PrimaryPageTitle title="日历" />
+
+    <div class="primary-page-body">
+      <!-- 月份导航 -->
+      <van-cell-group inset>
       <van-cell center>
         <template #title>
           <div class="month-nav">
@@ -131,10 +135,10 @@ function getMuscleGroup(exerciseId: string): string {
           </div>
         </template>
       </van-cell>
-    </van-cell-group>
+      </van-cell-group>
 
     <!-- 日历网格 -->
-    <van-cell-group inset>
+      <van-cell-group inset>
       <div class="calendar-grid">
         <!-- 星期标题 -->
         <div class="weekday">日</div>
@@ -159,15 +163,15 @@ function getMuscleGroup(exerciseId: string): string {
           <div v-else class="day-cell empty"></div>
         </template>
       </div>
-    </van-cell-group>
+      </van-cell-group>
 
     <!-- 统计摘要 -->
-    <van-cell-group inset title="本月统计">
+      <van-cell-group inset title="本月统计">
       <van-cell title="训练天数" :value="`${datesWithRecords.length}天`" />
       <van-cell title="训练次数" :value="`${recordStore.records.filter(r => datesWithRecords.includes(r.date)).length}次`" />
-    </van-cell-group>
+      </van-cell-group>
 
-    <van-cell-group inset title="当日训练">
+      <van-cell-group inset title="当日训练">
       <div class="selected-date">{{ selectedDate }}</div>
       <van-empty v-if="groupedSelectedDateRecords.length === 0" description="当天暂无训练记录" />
       <van-cell
@@ -185,14 +189,19 @@ function getMuscleGroup(exerciseId: string): string {
           </div>
         </template>
       </van-cell>
-    </van-cell-group>
+      </van-cell-group>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .calendar-page {
-  padding: 16px;
+  padding: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.primary-page-body {
+  padding: 0 16px;
 }
 
 .month-nav {

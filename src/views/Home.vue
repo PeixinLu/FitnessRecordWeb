@@ -5,6 +5,7 @@ import { useExerciseStore } from '@/stores/exercise'
 import { useRecordStore } from '@/stores/record'
 import { showConfirmDialog, showToast } from 'vant'
 import EquipmentDrawer from '@/components/EquipmentDrawer.vue'
+import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
 import { getEquipmentIcon } from '@/utils/equipmentIcon'
 import { groupRecordsByExercise, summarizeWorkoutSets, type WorkoutGroup } from '@/utils/workoutGroups'
 import WorkoutDetail from '@/views/WorkoutDetail.vue'
@@ -21,50 +22,6 @@ const selectedWorkoutExerciseId = ref('')
 const isEquipmentCollapsed = ref(false)
 const isNestedDrawerOpen = ref(false)
 const isSecondaryPageOpen = computed(() => showDrawer.value || showWorkoutDetail.value)
-
-// ===== 日期视图 =====
-const dateList = computed(() => {
-  const today = new Date()
-  const days: Array<{ date: Date; dayNum: number; weekday: string; isToday: boolean; dateStr: string }> = []
-
-  // 生成前后各3天的日期（共7天）
-  for (let i = -3; i <= 3; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i)
-    const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-    days.push({
-      date,
-      dayNum: date.getDate(),
-      weekday: weekdays[date.getDay()],
-      isToday: i === 0,
-      dateStr: recordStore.formatDate(date),
-    })
-  }
-  return days
-})
-
-// 日期滑动状态
-const dateScrollX = ref(0)
-const dateStartX = ref(0)
-const isDragging = ref(false)
-
-function onDateTouchStart(e: TouchEvent) {
-  isDragging.value = true
-  dateStartX.value = e.touches[0].clientX - dateScrollX.value
-}
-
-function onDateTouchMove(e: TouchEvent) {
-  if (!isDragging.value) return
-  const newX = e.touches[0].clientX - dateStartX.value
-  // 限制滑动范围（弹性）
-  const maxScroll = 60
-  dateScrollX.value = Math.max(-maxScroll, Math.min(maxScroll, newX))
-}
-
-function onDateTouchEnd() {
-  isDragging.value = false
-  // 弹性回缩到原位
-  dateScrollX.value = 0
-}
 
 // ===== 器械九宫格 =====
 const equipmentPage = ref(0)
@@ -143,26 +100,7 @@ function onRecordSaved() {
 
 <template>
   <div class="home-page" :class="{ 'secondary-page-open': isSecondaryPageOpen, 'nested-secondary-page-open': isSecondaryPageOpen && isNestedDrawerOpen }">
-    <!-- 顶部日期视图（固定） -->
-    <section class="date-section">
-      <div
-        class="date-container"
-        :style="{ transform: `translateX(${dateScrollX}px)` }"
-        @touchstart="onDateTouchStart"
-        @touchmove="onDateTouchMove"
-        @touchend="onDateTouchEnd"
-      >
-        <div
-          v-for="day in dateList"
-          :key="day.dateStr"
-          class="date-item"
-          :class="{ today: day.isToday }"
-        >
-          <span class="weekday">{{ day.weekday }}</span>
-          <span class="day-num">{{ day.dayNum }}</span>
-        </div>
-      </div>
-    </section>
+    <PrimaryPageTitle title="记录" />
 
     <!-- 器械九宫格（固定） -->
     <section class="equipment-section" :class="{ collapsed: isEquipmentCollapsed }">
@@ -277,50 +215,6 @@ function onRecordSaved() {
   background: #f5f5f7;
 }
 
-/* ===== 日期区域 ===== */
-.date-section {
-  padding: 8px 16px;
-  background: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.date-container {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  transition: transform 0.1s ease-out;
-}
-
-.date-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  gap: 0;
-  padding: 2px 0;
-  border-radius: 999px;
-  color: #aeaeb2;
-}
-
-.date-item.today {
-  padding: 4px 0;
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.weekday {
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.day-num {
-  font-size: 16px;
-  font-weight: 500;
-}
-
 /* ===== 器械区域 ===== */
 .equipment-section {
   padding: 6px 16px 8px;
@@ -328,7 +222,7 @@ function onRecordSaved() {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
-  top: 56px;
+  top: 0;
   z-index: 9;
   transition: padding 0.22s ease;
 }
@@ -543,14 +437,10 @@ function onRecordSaved() {
 }
 
 @media (max-height: 667px) {
-  .date-section {
-    padding-block: 6px;
-  }
-
   .equipment-section {
     padding-top: 4px;
     padding-bottom: 6px;
-    top: 52px;
+    top: 0;
   }
 
   .equipment-swipe {
@@ -577,19 +467,8 @@ function onRecordSaved() {
     background: #1c1c1e;
   }
 
-  .date-section,
   .equipment-section {
     background: #2c2c2e;
-  }
-
-  .date-item {
-    background: transparent;
-    color: #fff;
-  }
-
-  .date-item.today {
-    background: rgba(10, 132, 255, 0.15);
-    color: #0a84ff;
   }
 
   .equipment-section {
