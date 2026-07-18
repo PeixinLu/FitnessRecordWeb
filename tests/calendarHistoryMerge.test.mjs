@@ -20,7 +20,7 @@ test('calendar is mounted inside the primary stack and its old route redirects h
     readFile(path.resolve('src/router/index.ts'), 'utf8'),
   ])
 
-  assert.match(stackSource, /import Calendar from '@\/views\/Calendar\.vue'/)
+  assert.match(stackSource, /import Calendar from ["']@\/views\/Calendar\.vue["']/)
   assert.match(routerSource, /path: '\/calendar'[\s\S]*redirect: '\/'/)
   assert.doesNotMatch(routerSource, /path: '\/history'/)
 })
