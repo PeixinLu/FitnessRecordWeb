@@ -10,10 +10,10 @@ test('equipment swipe reserves compact height for two rows of SVG cards', async 
   assert.match(source, /grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/)
 })
 
-test('home uses a compact timeline and equipment grid for iPhone SE height', async () => {
+test('home removes the date timeline and keeps compact iPhone SE spacing', async () => {
   const source = await readFile(path.resolve('src/views/Home.vue'), 'utf8')
 
-  assert.match(source, /\.date-section\s*\{[^}]*padding:\s*8px 16px/m)
+  assert.doesNotMatch(source, /\.date-section\s*\{/)
   assert.match(source, /@media \(max-height: 667px\)/)
 })
 
@@ -24,7 +24,6 @@ test('home collapses the equipment area into a frosted row while records scroll'
   assert.match(source, /@scroll="onRecordsScroll"/)
   assert.match(source, /\.equipment-section\.collapsed/)
   assert.match(source, /backdrop-filter: blur\(20px\)/)
-  assert.match(source, /\.date-item\.today\s*\{[^}]*background: rgba\(0, 122, 255, 0\.1\)/m)
 })
 
 test('today workout entries use equipment icons and support group swipe deletion', async () => {

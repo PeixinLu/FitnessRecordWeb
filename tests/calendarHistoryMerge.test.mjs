@@ -14,13 +14,13 @@ test('calendar keeps a selected date and renders read-only grouped daily trainin
   assert.doesNotMatch(source, /deleteRecord/)
 })
 
-test('history route and tab are removed after merging into calendar', async () => {
-  const [appSource, routerSource] = await Promise.all([
-    readFile(path.resolve('src/App.vue'), 'utf8'),
+test('calendar is mounted inside the primary stack and its old route redirects home', async () => {
+  const [stackSource, routerSource] = await Promise.all([
+    readFile(path.resolve('src/components/PrimaryPageStack.vue'), 'utf8'),
     readFile(path.resolve('src/router/index.ts'), 'utf8'),
   ])
 
-  assert.doesNotMatch(appSource, /name: 'history'/)
+  assert.match(stackSource, /import Calendar from '@\/views\/Calendar\.vue'/)
+  assert.match(routerSource, /path: '\/calendar'[\s\S]*redirect: '\/'/)
   assert.doesNotMatch(routerSource, /path: '\/history'/)
-  assert.match(appSource, /name: 'calendar'/)
 })

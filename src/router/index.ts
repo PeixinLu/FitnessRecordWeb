@@ -6,23 +6,11 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('@/views/Home.vue'),
+      component: () => import('@/components/PrimaryPageStack.vue'),
     },
-    {
-      path: '/calendar',
-      name: 'calendar',
-      component: () => import('@/views/Calendar.vue'),
-    },
-    {
-      path: '/statistics',
-      name: 'statistics',
-      component: () => import('@/views/Statistics.vue'),
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: () => import('@/views/Settings.vue'),
-    },
+    { path: '/calendar', redirect: '/' },
+    { path: '/statistics', redirect: '/' },
+    { path: '/settings', redirect: '/' },
     {
       path: '/equipment-management',
       name: 'equipment-management',

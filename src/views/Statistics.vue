@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRecordStore } from '@/stores/record'
+import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
 
 const recordStore = useRecordStore()
 
@@ -27,19 +28,27 @@ const stats = computed(() => {
 
 <template>
   <div class="statistics-page">
-    <van-cell-group inset title="训练统计">
-      <van-cell title="总记录数" :value="`${stats.totalRecords}条`" />
-      <van-cell title="本周训练" :value="`${stats.weekCount}次`" />
-      <van-cell title="本月训练" :value="`${stats.monthCount}次`" />
-    </van-cell-group>
+    <PrimaryPageTitle title="统计" />
 
-    <van-empty v-if="recordStore.records.length === 0" description="暂无统计数据" />
+    <div class="primary-page-body">
+      <van-cell-group inset title="训练统计">
+        <van-cell title="总记录数" :value="`${stats.totalRecords}条`" />
+        <van-cell title="本周训练" :value="`${stats.weekCount}次`" />
+        <van-cell title="本月训练" :value="`${stats.monthCount}次`" />
+      </van-cell-group>
+
+      <van-empty v-if="recordStore.records.length === 0" description="暂无统计数据" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .statistics-page {
-  padding: 16px;
-  padding-bottom: 100px;
+  padding: 0;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.primary-page-body {
+  padding: 0 16px;
 }
 </style>
