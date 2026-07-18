@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, type Component } from 'vue'
 import Home from '@/views/Home.vue'
 import Calendar from '@/views/Calendar.vue'
 import Statistics from '@/views/Statistics.vue'
@@ -7,6 +7,7 @@ import Settings from '@/views/Settings.vue'
 import {
   activateCard,
   createCardStackState,
+  finishCardRecall,
   getCardVisualState,
   toggleStack,
   type CardStackState,
@@ -24,29 +25,97 @@ const pages: PrimaryPage[] = [
   { label: '设置', component: Settings },
 ]
 
+const FOREGROUND_TRANSITION_SECONDS = 0.3
+const RECALL_MIN_LOCK_MS = 300
+const RECALL_FALLBACK_MS = 450
 const stackState = ref<CardStackState>(createCardStackState())
+const cardStage = ref<HTMLElement | null>(null)
+const stackFab = ref<HTMLButtonElement | null>(null)
+let recallFallbackTimer: ReturnType<typeof window.setTimeout> | undefined
+let recallLockedUntil = 0
 const cardStates = computed(() =>
   pages.map((_, index) => getCardVisualState(index, pages.length, stackState.value)),
 )
 
+function clearRecallFallback() {
+  if (recallFallbackTimer === undefined) return
+  window.clearTimeout(recallFallbackTimer)
+  recallFallbackTimer = undefined
+}
+
+function finishRecall() {
+  if (!stackState.value.isSettling) return
+  if (Date.now() < recallLockedUntil) return
+  clearRecallFallback()
+  recallLockedUntil = 0
+  stackState.value = finishCardRecall(stackState.value)
+}
+
+function scheduleRecallFallback() {
+  clearRecallFallback()
+  recallLockedUntil = Date.now() + RECALL_MIN_LOCK_MS
+  recallFallbackTimer = window.setTimeout(finishRecall, RECALL_FALLBACK_MS)
+}
+
 function toggleStackMode() {
+  if (stackState.value.isSettling) return
+  const wasStacked = stackState.value.isStacked
   stackState.value = toggleStack(stackState.value)
+
+  if (wasStacked) {
+    scheduleRecallFallback()
+    return
+  }
+
+  nextTick(() => {
+    const recallButtons = cardStage.value?.querySelectorAll<HTMLButtonElement>('.card-recall.enabled')
+    recallButtons?.[stackState.value.activeIndex]?.focus()
+  })
 }
 
 function activatePage(index: number) {
-  if (!stackState.value.isStacked) return
+  if (!stackState.value.isStacked || stackState.value.isSettling) return
+  stackFab.value?.focus()
   stackState.value = activateCard(stackState.value, index, pages.length)
+  scheduleRecallFallback()
 }
+
+function handleStagePointerDown(event: PointerEvent) {
+  if (!stackState.value.isSettling) return
+  event.preventDefault()
+  event.stopPropagation()
+  stackFab.value?.focus()
+}
+
+function handleCardTransitionEnd(event: TransitionEvent, index: number) {
+  if (
+    event.target !== event.currentTarget ||
+    event.propertyName !== 'transform' ||
+    Math.abs(event.elapsedTime - FOREGROUND_TRANSITION_SECONDS) > 0.01 ||
+    index !== stackState.value.activeIndex
+  ) {
+    return
+  }
+  finishRecall()
+}
+
+onBeforeUnmount(clearRecallFallback)
 </script>
 
 <template>
-  <section class="card-stage" :class="{ stacked: stackState.isStacked }">
+  <section
+    ref="cardStage"
+    class="card-stage"
+    :class="{ stacked: stackState.isStacked }"
+    @pointerdown.capture="handleStagePointerDown"
+  >
     <article
       v-for="(page, index) in pages"
       :key="page.label"
       class="stack-card"
       :class="{ foreground: cardStates[index].isForeground }"
       :style="cardStates[index].style"
+      @transitionend="handleCardTransitionEnd($event, index)"
     >
       <div
         class="card-page-content"
@@ -60,7 +129,10 @@ function activatePage(index: number) {
       <button
         type="button"
         class="card-recall"
-        :class="{ enabled: cardStates[index].recallInteractive }"
+        :class="{
+          enabled: cardStates[index].recallInteractive,
+          guarding: cardStates[index].guardInteractive,
+        }"
         :aria-label="`打开${page.label}页面`"
         :aria-hidden="!cardStates[index].recallInteractive"
         :tabindex="cardStates[index].recallInteractive ? 0 : -1"
@@ -69,6 +141,7 @@ function activatePage(index: number) {
     </article>
 
     <button
+      ref="stackFab"
       type="button"
       class="stack-fab"
       :aria-label="stackState.isStacked ? '恢复当前页面' : '显示页面堆栈'"
@@ -128,6 +201,11 @@ function activatePage(index: number) {
 
 .card-recall.enabled {
   cursor: pointer;
+  pointer-events: auto;
+}
+
+.card-recall.guarding {
+  cursor: wait;
   pointer-events: auto;
 }
 

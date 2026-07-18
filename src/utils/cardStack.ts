@@ -1,6 +1,7 @@
 export interface CardStackState {
   activeIndex: number
   isStacked: boolean
+  isSettling: boolean
 }
 
 export interface CardVisualState {
@@ -14,6 +15,7 @@ export interface CardVisualState {
   isForeground: boolean
   contentInteractive: boolean
   recallInteractive: boolean
+  guardInteractive: boolean
 }
 
 const STACKED_TRANSITION =
@@ -23,7 +25,7 @@ const FOREGROUND_TRANSITION =
 const STACKED_SHADOW = '0 30px 80px rgba(0, 0, 0, 0.35)'
 
 export function createCardStackState(): CardStackState {
-  return { activeIndex: 0, isStacked: false }
+  return { activeIndex: 0, isStacked: false, isSettling: false }
 }
 
 function clampIndex(index: number, count: number): number {
@@ -32,12 +34,26 @@ function clampIndex(index: number, count: number): number {
 }
 
 export function toggleStack(state: CardStackState): CardStackState {
-  return { ...state, isStacked: !state.isStacked }
+  if (state.isSettling) return state
+  return {
+    ...state,
+    isStacked: !state.isStacked,
+    isSettling: state.isStacked,
+  }
 }
 
 export function activateCard(state: CardStackState, index: number, count: number): CardStackState {
-  if (!state.isStacked) return state
-  return { activeIndex: clampIndex(index, count), isStacked: false }
+  if (!state.isStacked || state.isSettling) return state
+  return {
+    activeIndex: clampIndex(index, count),
+    isStacked: false,
+    isSettling: true,
+  }
+}
+
+export function finishCardRecall(state: CardStackState): CardStackState {
+  if (!state.isSettling) return state
+  return { ...state, isSettling: false }
 }
 
 export function getCardVisualState(
@@ -65,6 +81,7 @@ export function getCardVisualState(
       isForeground: false,
       contentInteractive: false,
       recallInteractive: true,
+      guardInteractive: false,
     }
   }
 
@@ -78,8 +95,9 @@ export function getCardVisualState(
         transition: FOREGROUND_TRANSITION,
       },
       isForeground: true,
-      contentInteractive: true,
+      contentInteractive: !state.isSettling,
       recallInteractive: false,
+      guardInteractive: state.isSettling,
     }
   }
 
@@ -95,5 +113,6 @@ export function getCardVisualState(
     isForeground: false,
     contentInteractive: false,
     recallInteractive: false,
+    guardInteractive: false,
   }
 }

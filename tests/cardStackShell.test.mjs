@@ -14,10 +14,19 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   assert.match(source, /:aria-hidden="!cardStates\[index\]\.contentInteractive"/)
   assert.match(source, /class="card-recall"/)
   assert.match(source, /@click\.stop="activatePage\(index\)"/)
+  assert.match(source, /@transitionend="handleCardTransitionEnd\(\$event, index\)"/)
+  assert.doesNotMatch(source, /@transitioncancel=/)
+  assert.match(source, /@pointerdown\.capture="handleStagePointerDown"/)
+  assert.match(source, /Math\.abs\(event\.elapsedTime - FOREGROUND_TRANSITION_SECONDS\)/)
+  assert.match(source, /Date\.now\(\) < recallLockedUntil/)
+  assert.match(source, /guarding: cardStates\[index\]\.guardInteractive/)
   assert.match(source, /:tabindex="cardStates\[index\]\.recallInteractive \? 0 : -1"/)
   assert.match(source, /:aria-hidden="!cardStates\[index\]\.recallInteractive"/)
+  assert.match(source, /ref="stackFab"/)
+  assert.match(source, /stackFab\.value\?\.focus\(\)/)
   assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*none/m)
   assert.match(source, /\.card-page-content\.blocked\s*\{[^}]*pointer-events:\s*none/m)
+  assert.match(source, /\.card-recall\.guarding\s*\{[^}]*pointer-events:\s*auto/m)
 })
 
 test('app removes the bottom dock and router mounts one primary stack route', async () => {
@@ -53,4 +62,7 @@ test('primary pages reserve safe scrolling space beneath the stack FAB', async (
   for (const source of sources) {
     assert.match(source, /padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/)
   }
+
+  assert.match(sources[0], /\.home-page\s*\{[^}]*height:\s*100%/m)
+  assert.doesNotMatch(sources[0], /\.home-page\s*\{[^}]*height:\s*100vh/m)
 })

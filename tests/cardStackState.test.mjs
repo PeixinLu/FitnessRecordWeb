@@ -38,7 +38,7 @@ test('four stacked cards use the specified offsets and block page content', asyn
 
 test('foreground mode only exposes the active page', async () => {
   const { getCardVisualState } = await loadModule()
-  const state = { activeIndex: 2, isStacked: false }
+  const state = { activeIndex: 2, isStacked: false, isSettling: false }
   const cards = Array.from({ length: 4 }, (_, index) => getCardVisualState(index, 4, state))
 
   assert.equal(cards[2].style.transform, 'translate3d(0, 0, 0)')
@@ -53,10 +53,38 @@ test('foreground mode only exposes the active page', async () => {
 
 test('FAB preserves the active page and card recall clamps the selected index', async () => {
   const { activateCard, toggleStack } = await loadModule()
-  const foreground = { activeIndex: 2, isStacked: false }
+  const foreground = { activeIndex: 2, isStacked: false, isSettling: false }
   const stacked = toggleStack(foreground)
 
-  assert.deepEqual(stacked, { activeIndex: 2, isStacked: true })
-  assert.deepEqual(toggleStack(stacked), foreground)
-  assert.deepEqual(activateCard(stacked, 99, 4), { activeIndex: 3, isStacked: false })
+  assert.deepEqual(stacked, { activeIndex: 2, isStacked: true, isSettling: false })
+  assert.deepEqual(toggleStack(stacked), {
+    activeIndex: 2,
+    isStacked: false,
+    isSettling: true,
+  })
+  assert.deepEqual(activateCard(stacked, 99, 4), {
+    activeIndex: 3,
+    isStacked: false,
+    isSettling: true,
+  })
+})
+
+test('recall keeps every page blocked until the foreground transition settles', async () => {
+  const { activateCard, finishCardRecall, getCardVisualState } = await loadModule()
+  const stacked = { activeIndex: 0, isStacked: true, isSettling: false }
+  const recalling = activateCard(stacked, 1, 4)
+  const recallingCards = Array.from({ length: 4 }, (_, index) =>
+    getCardVisualState(index, 4, recalling),
+  )
+
+  assert.deepEqual(recalling, { activeIndex: 1, isStacked: false, isSettling: true })
+  assert.ok(recallingCards.every(card => card.contentInteractive === false))
+  assert.equal(recallingCards[1].guardInteractive, true)
+  assert.equal(recallingCards[1].recallInteractive, false)
+  assert.deepEqual(activateCard(recalling, 3, 4), recalling)
+
+  const settled = finishCardRecall(recalling)
+  assert.deepEqual(settled, { activeIndex: 1, isStacked: false, isSettling: false })
+  assert.equal(getCardVisualState(1, 4, settled).contentInteractive, true)
+  assert.equal(getCardVisualState(1, 4, settled).guardInteractive, false)
 })
