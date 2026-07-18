@@ -39,6 +39,8 @@ const VISIBLE_ITEMS = 5
 const MOMENTUM_FRICTION = 0.94
 const MIN_VELOCITY = 0.35
 
+const animatingColumns = reactive<Set<number>>(new Set())
+
 const wheelCount = computed(() => normalizeWheelCount(props.count))
 const normalizedValue = computed(() =>
   normalizeWheelModel({
@@ -112,8 +114,12 @@ function emitValue() {
 
 function snapColumn(index: number) {
   const selectedIndex = getSelectedIndex(index)
+  animatingColumns.add(index)
   states[index].offset = getOffsetForIndex(selectedIndex, ITEM_HEIGHT)
   emitValue()
+  window.setTimeout(() => {
+    animatingColumns.delete(index)
+  }, 180)
 }
 
 function animateMomentum(index: number) {
@@ -145,11 +151,12 @@ function animateMomentum(index: number) {
 
 function onTouchStart(index: number, event: TouchEvent) {
   const state = states[index]
+  animatingColumns.delete(index)
   state.isDragging = true
   state.startY = event.touches[0].clientY
   state.startOffset = state.offset
   state.lastY = state.startY
-  state.lastTime = Date.now()
+  state.lastTime = performance.now()
   state.velocity = 0
 }
 
@@ -159,7 +166,7 @@ function onTouchMove(index: number, event: TouchEvent) {
 
   const currentY = event.touches[0].clientY
   const deltaY = currentY - state.startY
-  const now = Date.now()
+  const now = performance.now()
   const dt = now - state.lastTime
 
   if (dt > 0) {
@@ -186,6 +193,7 @@ function onTouchEnd(index: number) {
 function onWheel(index: number, event: WheelEvent) {
   event.preventDefault()
   const state = states[index]
+  animatingColumns.delete(index)
   state.offset = clampOffset(index, state.offset - event.deltaY)
 
   if (state.wheelTimer) {
@@ -221,6 +229,7 @@ watch(
       <div class="number-wheel-highlight"></div>
       <div
         class="number-wheel-track"
+        :class="{ animating: animatingColumns.has(index) }"
         :style="{ transform: `translateY(${states[index]?.offset ?? 0}px)` }"
       >
         <div v-for="value in column.values" :key="value" class="number-wheel-item">
@@ -286,9 +295,12 @@ watch(
   top: 80px;
   left: 4px;
   width: 44px;
-  transition: transform 0.16s ease-out;
   will-change: transform;
   z-index: 1;
+}
+
+.number-wheel-track.animating {
+  transition: transform 0.18s ease-out;
 }
 
 .number-wheel-item {
