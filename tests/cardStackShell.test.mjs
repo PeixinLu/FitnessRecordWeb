@@ -7,7 +7,7 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   const source = await readFile(path.resolve('src/components/PrimaryPageStack.vue'), 'utf8')
 
   for (const page of ['Home', 'Calendar', 'Statistics', 'Settings']) {
-    assert.match(source, new RegExp(`import ${page} from '@\/views\/${page}\.vue'`))
+    assert.match(source, new RegExp(`import ${page} from ["']@\/views\/${page}\.vue["']`))
   }
   assert.match(source, /class="card-page-content"/)
   assert.match(source, /:inert="!cardStates\[index\]\.contentInteractive"/)
@@ -97,7 +97,7 @@ test('primary views share large page titles and Home removes its date timeline',
     [statistics, '统计'],
     [settings, '设置'],
   ]) {
-    assert.match(source, /import PrimaryPageTitle from '@\/components\/PrimaryPageTitle\.vue'/)
+    assert.match(source, /import PrimaryPageTitle from ["']@\/components\/PrimaryPageTitle\.vue["']/)
     assert.ok(source.includes(`<PrimaryPageTitle title="${title}" />`))
   }
 

@@ -32,5 +32,5 @@ test('today workout entries use equipment icons and support group swipe deletion
   assert.match(source, /function getGroupEquipmentIcon/)
   assert.match(source, /<van-swipe-cell/)
   assert.match(source, /async function deleteWorkoutGroup/)
-  assert.match(source, /group\.records\.map\(record => recordStore\.deleteRecord\(record\.id\)\)/)
+  assert.match(source, /group\.records\.map\(\(record\) => recordStore\.deleteRecord\(record\.id\)\)/)
 })

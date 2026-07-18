@@ -32,7 +32,8 @@ test('four stacked cards use the specified offsets and block page content', asyn
   ])
   assert.deepEqual(cards.map(card => card.contentInteractive), [false, false, false, false])
   assert.deepEqual(cards.map(card => card.recallInteractive), [true, true, true, true])
-  assert.ok(cards.every(card => card.style.borderRadius === '20px'))
+  assert.ok(cards.every(card => card.style.borderRadius === '40px'))
+  assert.ok(cards.every(card => card.style.cornerShape === 'superellipse(1.2)'))
   assert.ok(cards.every(card => !card.style.transition.includes('z-index')))
 })
 

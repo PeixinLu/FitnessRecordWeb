@@ -25,6 +25,8 @@ interface PrimaryPage {
   component: Component;
 }
 
+type EnvironmentColor = readonly [number, number, number];
+
 const pages: PrimaryPage[] = [
   { label: "记录", component: Home },
   { label: "日历", component: Calendar },
@@ -35,10 +37,18 @@ const pages: PrimaryPage[] = [
 const FOREGROUND_TRANSITION_SECONDS = 0.3;
 const RECALL_MIN_LOCK_MS = 300;
 const RECALL_FALLBACK_MS = 450;
+const ENVIRONMENT_TRANSITION_MS = 280;
+const PAGE_ENVIRONMENT_COLOR: EnvironmentColor = [245, 245, 247];
+const STACK_ENVIRONMENT_COLOR: EnvironmentColor = [0, 0, 0];
 const stackState = ref<CardStackState>(createCardStackState());
 const cardStage = ref<HTMLElement | null>(null);
 const stackFab = ref<HTMLButtonElement | null>(null);
+const themeColorMeta = document.querySelector<HTMLMetaElement>(
+  'meta[name="theme-color"]',
+);
 let recallFallbackTimer: ReturnType<typeof window.setTimeout> | undefined;
+let environmentAnimationFrame: number | undefined;
+let environmentColor = PAGE_ENVIRONMENT_COLOR;
 let recallLockedUntil = 0;
 const cardStates = computed(() =>
   pages.map((_, index) =>
@@ -46,17 +56,83 @@ const cardStates = computed(() =>
   ),
 );
 const usesStackEnvironment = computed(
-  () => stackState.value.isStacked || stackState.value.isSettling,
+  () => stackState.value.isStacked,
 );
+
+function cancelEnvironmentAnimation() {
+  if (environmentAnimationFrame === undefined) return;
+  window.cancelAnimationFrame(environmentAnimationFrame);
+  environmentAnimationFrame = undefined;
+}
+
+function applyThemeColor(color: EnvironmentColor) {
+  environmentColor = color;
+  themeColorMeta?.setAttribute("content", `rgb(${color.join(", ")})`);
+}
+
+function animateThemeColor(targetColor: EnvironmentColor) {
+  cancelEnvironmentAnimation();
+
+  if (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    environmentColor.every((channel, index) => channel === targetColor[index])
+  ) {
+    applyThemeColor(targetColor);
+    return;
+  }
+
+  const startColor = environmentColor;
+  const startedAt = performance.now();
+
+  function updateThemeColor(timestamp: number) {
+    const progress = Math.min(
+      (timestamp - startedAt) / ENVIRONMENT_TRANSITION_MS,
+      1,
+    );
+    const easedProgress = progress * progress * (3 - 2 * progress);
+    const nextColor: EnvironmentColor = [
+      Math.round(
+        startColor[0] + (targetColor[0] - startColor[0]) * easedProgress,
+      ),
+      Math.round(
+        startColor[1] + (targetColor[1] - startColor[1]) * easedProgress,
+      ),
+      Math.round(
+        startColor[2] + (targetColor[2] - startColor[2]) * easedProgress,
+      ),
+    ];
+
+    applyThemeColor(nextColor);
+
+    if (progress < 1) {
+      environmentAnimationFrame = window.requestAnimationFrame(updateThemeColor);
+      return;
+    }
+
+    environmentAnimationFrame = undefined;
+  }
+
+  environmentAnimationFrame = window.requestAnimationFrame(updateThemeColor);
+}
 
 function syncBrowserEnvironment(active: boolean) {
   document.documentElement.classList.toggle("stack-environment", active);
-  document
-    .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    ?.setAttribute("content", active ? "#000000" : "#f5f5f7");
+  animateThemeColor(
+    active ? STACK_ENVIRONMENT_COLOR : PAGE_ENVIRONMENT_COLOR,
+  );
 }
 
-watch(usesStackEnvironment, syncBrowserEnvironment, { immediate: true });
+function resetBrowserEnvironment() {
+  cancelEnvironmentAnimation();
+  document.documentElement.classList.remove("stack-environment");
+  applyThemeColor(PAGE_ENVIRONMENT_COLOR);
+}
+
+watch(
+  usesStackEnvironment,
+  (active) => syncBrowserEnvironment(active),
+  { immediate: true },
+);
 
 function clearRecallFallback() {
   if (recallFallbackTimer === undefined) return;
@@ -124,7 +200,7 @@ function handleCardTransitionEnd(event: TransitionEvent, index: number) {
 
 onBeforeUnmount(() => {
   clearRecallFallback();
-  syncBrowserEnvironment(false);
+  resetBrowserEnvironment();
 });
 </script>
 
@@ -191,8 +267,9 @@ onBeforeUnmount(() => {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: #000;
+  background-color: var(--app-environment-color);
   perspective: none;
+  transition: background-color var(--app-environment-transition-duration) ease;
 }
 
 .stack-card {
@@ -333,6 +410,7 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .card-stage,
   .stack-card,
   .stack-fab,
   .stack-tabs-icon,
