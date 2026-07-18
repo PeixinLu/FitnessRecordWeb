@@ -36,16 +36,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-#app {
-  min-height: 100vh;
-}
 </style>
 
 <style scoped>
 .app-container,
 .main-content {
-  min-height: 100vh;
-  min-height: 100dvh;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .main-content {

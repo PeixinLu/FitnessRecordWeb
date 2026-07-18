@@ -413,7 +413,10 @@ function onRecordSaved() {
   position: relative;
   z-index: 1;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }

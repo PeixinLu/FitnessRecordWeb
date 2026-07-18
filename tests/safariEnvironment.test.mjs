@@ -54,3 +54,33 @@ test('stack state fades the page environment and Safari chrome together', async 
   )
   assert.match(titleSource, /padding-top:\s*calc\(18px \+ env\(safe-area-inset-top\)\)/)
 })
+
+test('mobile viewport stays pinned while page content owns vertical scrolling', async () => {
+  const [globalSource, appSource, stackSource, homeSource] = await Promise.all([
+    readFile(path.resolve('src/style.css'), 'utf8'),
+    readFile(path.resolve('src/App.vue'), 'utf8'),
+    readFile(path.resolve('src/components/PrimaryPageStack.vue'), 'utf8'),
+    readFile(path.resolve('src/views/Home.vue'), 'utf8'),
+  ])
+
+  assert.match(
+    globalSource,
+    /html,[\s\S]*body,[\s\S]*#app\s*\{[^}]*height:\s*100%[^}]*min-height:\s*0[^}]*overflow:\s*hidden/m,
+  )
+  assert.doesNotMatch(appSource, /#app\s*\{[^}]*min-height:\s*100vh/m)
+  assert.match(
+    appSource,
+    /\.app-container,[\s\S]*\.main-content\s*\{[^}]*height:\s*100%[^}]*min-height:\s*0[^}]*overflow:\s*hidden/m,
+  )
+  assert.match(stackSource, /\.card-stage\s*\{[^}]*height:\s*100%[^}]*overscroll-behavior:\s*none/m)
+  assert.doesNotMatch(stackSource, /\.card-stage\s*\{[^}]*(?:100vh|100dvh)/m)
+  assert.match(
+    stackSource,
+    /\.card-page-content\s*\{[^}]*overflow:\s*auto[^}]*overscroll-behavior-y:\s*contain/m,
+  )
+  assert.match(stackSource, /\.card-page-content\.blocked\s*\{[^}]*overflow:\s*hidden/m)
+  assert.match(
+    homeSource,
+    /\.records-section\s*\{[^}]*min-height:\s*0[^}]*overflow-y:\s*auto[^}]*overscroll-behavior-y:\s*contain/m,
+  )
+})

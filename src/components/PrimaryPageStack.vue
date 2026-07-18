@@ -264,9 +264,9 @@ onBeforeUnmount(() => {
 .card-stage {
   position: relative;
   width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background-color: var(--app-environment-color);
   perspective: none;
   transition: background-color var(--app-environment-transition-duration) ease;
@@ -287,9 +287,12 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .card-page-content.blocked {
+  overflow: hidden;
   pointer-events: none;
   user-select: none;
 }
