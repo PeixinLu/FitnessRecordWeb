@@ -19,3 +19,26 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*80px/m)
   assert.match(source, /\.card-page-content\.blocked\s*\{[^}]*pointer-events:\s*none/m)
 })
+
+test('app removes the bottom dock and router mounts one primary stack route', async () => {
+  const [appSource, routerSource] = await Promise.all([
+    readFile(path.resolve('src/App.vue'), 'utf8'),
+    readFile(path.resolve('src/router/index.ts'), 'utf8'),
+  ])
+
+  assert.doesNotMatch(appSource, /floating-tabbar|tabItems|tab-item/)
+  assert.doesNotMatch(appSource, /padding-bottom:\s*68px/)
+  assert.match(appSource, /<router-view\s*\/>/)
+  assert.match(routerSource, /path:\s*'\/'[\s\S]*name:\s*'home'[\s\S]*PrimaryPageStack\.vue/)
+  for (const legacyPath of ['calendar', 'statistics', 'settings']) {
+    assert.match(routerSource, new RegExp(`path: '/${legacyPath}'[\\s\\S]*redirect: '/'`))
+  }
+  for (const secondaryPath of [
+    '/equipment-management',
+    '/equipment-management/:equipmentId',
+    '/workout/:date/:exerciseId',
+    '/debug/number-wheel',
+  ]) {
+    assert.ok(routerSource.includes(`path: '${secondaryPath}'`))
+  }
+})
