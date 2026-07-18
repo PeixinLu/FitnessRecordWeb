@@ -14,7 +14,7 @@ function applyMask(el: HTMLElement, state: SmoothCornersState): void {
 
   const style = smoothCornerStyle(width, height, state.radius)
   for (const [key, value] of Object.entries(style)) {
-    ;(el.style as Record<string, string>)[key] = value
+    ;(el.style as unknown as Record<string, string>)[key] = value
   }
   state.applied = true
 }
@@ -78,13 +78,13 @@ export const vSmoothCorners: Directive<HTMLElement, number | string> = {
 
     // 清理 style
     el.style.maskImage = ''
-    el.style.WebkitMaskImage = ''
+    el.style.webkitMaskImage = ''
     el.style.maskSize = ''
-    el.style.WebkitMaskSize = ''
+    el.style.webkitMaskSize = ''
     el.style.maskRepeat = ''
-    el.style.WebkitMaskRepeat = ''
+    el.style.webkitMaskRepeat = ''
     el.style.maskPosition = ''
-    el.style.WebkitMaskPosition = ''
+    el.style.webkitMaskPosition = ''
 
     delete (el as any).__smoothCorners
   },
