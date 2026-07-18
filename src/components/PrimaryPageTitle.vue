@@ -10,6 +10,7 @@ defineProps<{ title: string }>()
 .primary-page-title {
   margin: 0;
   padding: 18px 20px 10px;
+  padding-top: calc(18px + env(safe-area-inset-top));
   color: #1c1c1e;
   font-size: 34px;
   font-weight: 700;

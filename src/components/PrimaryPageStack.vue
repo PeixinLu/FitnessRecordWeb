@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, type Component } from 'vue'
-import Home from '@/views/Home.vue'
-import Calendar from '@/views/Calendar.vue'
-import Statistics from '@/views/Statistics.vue'
-import Settings from '@/views/Settings.vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  watch,
+  type Component,
+} from "vue";
+import Home from "@/views/Home.vue";
+import Calendar from "@/views/Calendar.vue";
+import Statistics from "@/views/Statistics.vue";
+import Settings from "@/views/Settings.vue";
 import {
   activateCard,
   createCardStackState,
@@ -11,95 +18,114 @@ import {
   getCardVisualState,
   toggleStack,
   type CardStackState,
-} from '@/utils/cardStack'
+} from "@/utils/cardStack";
 
 interface PrimaryPage {
-  label: string
-  component: Component
+  label: string;
+  component: Component;
 }
 
 const pages: PrimaryPage[] = [
-  { label: '记录', component: Home },
-  { label: '日历', component: Calendar },
-  { label: '统计', component: Statistics },
-  { label: '设置', component: Settings },
-]
+  { label: "记录", component: Home },
+  { label: "日历", component: Calendar },
+  { label: "统计", component: Statistics },
+  { label: "设置", component: Settings },
+];
 
-const FOREGROUND_TRANSITION_SECONDS = 0.3
-const RECALL_MIN_LOCK_MS = 300
-const RECALL_FALLBACK_MS = 450
-const stackState = ref<CardStackState>(createCardStackState())
-const cardStage = ref<HTMLElement | null>(null)
-const stackFab = ref<HTMLButtonElement | null>(null)
-let recallFallbackTimer: ReturnType<typeof window.setTimeout> | undefined
-let recallLockedUntil = 0
+const FOREGROUND_TRANSITION_SECONDS = 0.3;
+const RECALL_MIN_LOCK_MS = 300;
+const RECALL_FALLBACK_MS = 450;
+const stackState = ref<CardStackState>(createCardStackState());
+const cardStage = ref<HTMLElement | null>(null);
+const stackFab = ref<HTMLButtonElement | null>(null);
+let recallFallbackTimer: ReturnType<typeof window.setTimeout> | undefined;
+let recallLockedUntil = 0;
 const cardStates = computed(() =>
-  pages.map((_, index) => getCardVisualState(index, pages.length, stackState.value)),
-)
+  pages.map((_, index) =>
+    getCardVisualState(index, pages.length, stackState.value),
+  ),
+);
+const usesStackEnvironment = computed(
+  () => stackState.value.isStacked || stackState.value.isSettling,
+);
+
+function syncBrowserEnvironment(active: boolean) {
+  document.documentElement.classList.toggle("stack-environment", active);
+  document
+    .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    ?.setAttribute("content", active ? "#000000" : "#f5f5f7");
+}
+
+watch(usesStackEnvironment, syncBrowserEnvironment, { immediate: true });
 
 function clearRecallFallback() {
-  if (recallFallbackTimer === undefined) return
-  window.clearTimeout(recallFallbackTimer)
-  recallFallbackTimer = undefined
+  if (recallFallbackTimer === undefined) return;
+  window.clearTimeout(recallFallbackTimer);
+  recallFallbackTimer = undefined;
 }
 
 function finishRecall() {
-  if (!stackState.value.isSettling) return
-  if (Date.now() < recallLockedUntil) return
-  clearRecallFallback()
-  recallLockedUntil = 0
-  stackState.value = finishCardRecall(stackState.value)
+  if (!stackState.value.isSettling) return;
+  if (Date.now() < recallLockedUntil) return;
+  clearRecallFallback();
+  recallLockedUntil = 0;
+  stackState.value = finishCardRecall(stackState.value);
 }
 
 function scheduleRecallFallback() {
-  clearRecallFallback()
-  recallLockedUntil = Date.now() + RECALL_MIN_LOCK_MS
-  recallFallbackTimer = window.setTimeout(finishRecall, RECALL_FALLBACK_MS)
+  clearRecallFallback();
+  recallLockedUntil = Date.now() + RECALL_MIN_LOCK_MS;
+  recallFallbackTimer = window.setTimeout(finishRecall, RECALL_FALLBACK_MS);
 }
 
 function toggleStackMode() {
-  if (stackState.value.isSettling) return
-  const wasStacked = stackState.value.isStacked
-  stackState.value = toggleStack(stackState.value)
+  if (stackState.value.isSettling) return;
+  const wasStacked = stackState.value.isStacked;
+  stackState.value = toggleStack(stackState.value);
 
   if (wasStacked) {
-    scheduleRecallFallback()
-    return
+    scheduleRecallFallback();
+    return;
   }
 
   nextTick(() => {
-    const recallButtons = cardStage.value?.querySelectorAll<HTMLButtonElement>('.card-recall.enabled')
-    recallButtons?.[stackState.value.activeIndex]?.focus()
-  })
+    const recallButtons = cardStage.value?.querySelectorAll<HTMLButtonElement>(
+      ".card-recall.enabled",
+    );
+    recallButtons?.[stackState.value.activeIndex]?.focus();
+  });
 }
 
 function activatePage(index: number) {
-  if (!stackState.value.isStacked || stackState.value.isSettling) return
-  stackFab.value?.focus()
-  stackState.value = activateCard(stackState.value, index, pages.length)
-  scheduleRecallFallback()
+  if (!stackState.value.isStacked || stackState.value.isSettling) return;
+  stackFab.value?.focus();
+  stackState.value = activateCard(stackState.value, index, pages.length);
+  scheduleRecallFallback();
 }
 
 function handleStagePointerDown(event: PointerEvent) {
-  if (!stackState.value.isSettling) return
-  event.preventDefault()
-  event.stopPropagation()
-  stackFab.value?.focus()
+  if (!stackState.value.isSettling) return;
+  event.preventDefault();
+  event.stopPropagation();
+  stackFab.value?.focus();
 }
 
 function handleCardTransitionEnd(event: TransitionEvent, index: number) {
   if (
     event.target !== event.currentTarget ||
-    event.propertyName !== 'transform' ||
+    event.propertyName !== "transform" ||
     Math.abs(event.elapsedTime - FOREGROUND_TRANSITION_SECONDS) > 0.01 ||
     index !== stackState.value.activeIndex
   ) {
-    return
+    return;
   }
-  finishRecall()
+  finishRecall();
 }
 
-onBeforeUnmount(clearRecallFallback)
+onBeforeUnmount(() => {
+  clearRecallFallback();
+  syncBrowserEnvironment(false);
+});
 </script>
 
 <template>
@@ -267,22 +293,23 @@ onBeforeUnmount(clearRecallFallback)
 .stack-tabs-icon-back,
 .stack-tabs-icon-front {
   position: absolute;
-  width: 17px;
-  height: 19px;
-  border: 1.8px solid currentColor;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
   border-radius: 4px;
 }
 
 .stack-tabs-icon-back {
   top: 2px;
   left: 2px;
-  opacity: 0.62;
+  opacity: 0.42;
+  border-radius: 5px;
 }
 
 .stack-tabs-icon-front {
   right: 2px;
   bottom: 2px;
-  background: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 1);
 }
 
 .stack-back-icon {
@@ -290,6 +317,7 @@ onBeforeUnmount(clearRecallFallback)
   height: 13px;
   border-bottom: 2px solid currentColor;
   border-left: 2px solid currentColor;
+  border-radius: 0 4px 0 0;
   opacity: 0;
   transform: translateX(4px) rotate(45deg);
 }
