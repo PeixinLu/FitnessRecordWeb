@@ -123,6 +123,6 @@ import { showConfirmDialog } from 'vant'
 <style scoped>
 .settings-page {
   padding: 16px;
-  padding-bottom: 60px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 </style>

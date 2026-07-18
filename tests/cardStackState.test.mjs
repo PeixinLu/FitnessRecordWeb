@@ -25,10 +25,10 @@ test('four stacked cards use the specified offsets and block page content', asyn
   const cards = Array.from({ length: 4 }, (_, index) => getCardVisualState(index, 4, state))
 
   assert.deepEqual(cards.map(card => card.style.transform), [
-    'translate3d(0, 10px, -12px) rotateX(-1deg)',
-    'translate3d(0, 25.00%, -11px) rotateX(-1deg)',
-    'translate3d(0, 50.00%, -10px) rotateX(-1deg)',
-    'translate3d(0, 75.00%, -9px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 10px, -12px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 25.00%, -11px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 50.00%, -10px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 75.00%, -9px) rotateX(-1deg)',
   ])
   assert.deepEqual(cards.map(card => card.contentInteractive), [false, false, false, false])
   assert.deepEqual(cards.map(card => card.recallInteractive), [true, true, true, true])

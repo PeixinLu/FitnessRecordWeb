@@ -87,7 +87,7 @@ Stage 遵循参考文档：
 
 - 宽高占满视口，优先使用 `100dvh` 并以 `100vh` 兜底。
 - 背景为 `#000`。
-- `perspective: 80px`。
+- Stage 不直接应用父级透视；每张非前台卡片的 transform 以 `perspective(80px)` 开头。该写法保留参考景深，同时避免四张全屏卡片在移动端浏览器中因父级透视投影而把首页露出带推离视口。
 - `overflow: hidden`。
 
 卡片遵循参考文档：
@@ -95,6 +95,7 @@ Stage 遵循参考文档：
 - 绝对定位并占满 Stage。
 - `transform-origin: top`。
 - `transform-style: preserve-3d`。
+- 堆叠态和前台非激活态使用 `perspective(80px) translate3d(...) rotateX(-1deg)`。
 - 堆叠态圆角 `20px`，阴影 `0 30px 80px rgba(0, 0, 0, 0.35)`，旋转 `rotateX(-1deg)`。
 - 四卡堆叠时 Y 偏移依次为 `10px`、`25%`、`50%`、`75%`。
 - Z 深度依次为 `-12px`、`-11px`、`-10px`、`-9px`。

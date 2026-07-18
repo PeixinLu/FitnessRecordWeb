@@ -56,7 +56,7 @@ export function getCardVisualState(
     const y = index === 0 ? '10px' : `${(index * 100 / count).toFixed(2)}%`
     return {
       style: {
-        transform: `translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
+        transform: `perspective(80px) translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
         borderRadius: '20px',
         boxShadow: STACKED_SHADOW,
         zIndex: index + 1,
@@ -86,7 +86,7 @@ export function getCardVisualState(
   const y = index < activeIndex ? '-100%' : '100%'
   return {
     style: {
-      transform: `translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
+      transform: `perspective(80px) translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
       borderRadius: '20px',
       boxShadow: STACKED_SHADOW,
       zIndex: index + 1,

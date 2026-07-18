@@ -16,7 +16,7 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   assert.match(source, /@click\.stop="activatePage\(index\)"/)
   assert.match(source, /:tabindex="cardStates\[index\]\.recallInteractive \? 0 : -1"/)
   assert.match(source, /:aria-hidden="!cardStates\[index\]\.recallInteractive"/)
-  assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*80px/m)
+  assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*none/m)
   assert.match(source, /\.card-page-content\.blocked\s*\{[^}]*pointer-events:\s*none/m)
 })
 
@@ -40,5 +40,17 @@ test('app removes the bottom dock and router mounts one primary stack route', as
     '/debug/number-wheel',
   ]) {
     assert.ok(routerSource.includes(`path: '${secondaryPath}'`))
+  }
+})
+
+test('primary pages reserve safe scrolling space beneath the stack FAB', async () => {
+  const sources = await Promise.all(
+    ['Home', 'Calendar', 'Statistics', 'Settings'].map(name =>
+      readFile(path.resolve(`src/views/${name}.vue`), 'utf8'),
+    ),
+  )
+
+  for (const source of sources) {
+    assert.match(source, /padding-bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/)
   }
 })

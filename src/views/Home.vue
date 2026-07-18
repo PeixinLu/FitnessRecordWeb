@@ -458,7 +458,7 @@ function onRecordSaved() {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  padding-bottom: 76px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .records-header {
@@ -562,7 +562,7 @@ function onRecordSaved() {
 
   .records-section {
     padding-top: 10px;
-    padding-bottom: 68px;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 
   .records-header {

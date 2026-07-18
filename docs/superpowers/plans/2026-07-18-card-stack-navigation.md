@@ -14,7 +14,7 @@
 - 页面加载默认显示记录页，不持久化一级页面索引。
 - 堆叠态页面内容必须同时应用 `pointer-events: none`、`inert` 和 `aria-hidden="true"`。
 - 堆叠态只有透明卡片召回按钮可交互；FAB 不改变当前激活页。
-- Stage 使用 `perspective: 80px`；四卡 Y 偏移为 `10px`、`25%`、`50%`、`75%`，Z 深度为 `-12px`、`-11px`、`-10px`、`-9px`。
+- Stage 不直接应用父级透视；每张非前台卡片使用 `perspective(80px)`；四卡 Y 偏移为 `10px`、`25%`、`50%`、`75%`，Z 深度为 `-12px`、`-11px`、`-10px`、`-9px`。
 - 前台到堆叠使用 400ms 回弹曲线；堆叠到前台使用 300ms ease-out；transition 不包含 `z-index`。
 - 不新增依赖，不修改 IndexedDB schema，不改变二级业务流程。
 - 完成后运行 `node --test tests/*.test.mjs` 与 `npm run build`，并手动验证移动端交互。
@@ -63,10 +63,10 @@ test('four stacked cards use the specified offsets and block page content', asyn
   const cards = Array.from({ length: 4 }, (_, index) => getCardVisualState(index, 4, state))
 
   assert.deepEqual(cards.map(card => card.style.transform), [
-    'translate3d(0, 10px, -12px) rotateX(-1deg)',
-    'translate3d(0, 25.00%, -11px) rotateX(-1deg)',
-    'translate3d(0, 50.00%, -10px) rotateX(-1deg)',
-    'translate3d(0, 75.00%, -9px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 10px, -12px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 25.00%, -11px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 50.00%, -10px) rotateX(-1deg)',
+    'perspective(80px) translate3d(0, 75.00%, -9px) rotateX(-1deg)',
   ])
   assert.deepEqual(cards.map(card => card.contentInteractive), [false, false, false, false])
   assert.deepEqual(cards.map(card => card.recallInteractive), [true, true, true, true])
@@ -169,7 +169,7 @@ export function getCardVisualState(
     const y = index === 0 ? '10px' : `${(index * 100 / count).toFixed(2)}%`
     return {
       style: {
-        transform: `translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
+        transform: `perspective(80px) translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
         borderRadius: '20px',
         boxShadow: STACKED_SHADOW,
         zIndex: index + 1,
@@ -199,7 +199,7 @@ export function getCardVisualState(
   const y = index < activeIndex ? '-100%' : '100%'
   return {
     style: {
-      transform: `translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
+      transform: `perspective(80px) translate3d(0, ${y}, ${z}px) rotateX(-1deg)`,
       borderRadius: '20px',
       boxShadow: STACKED_SHADOW,
       zIndex: index + 1,
@@ -258,7 +258,7 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   assert.match(source, /@click\.stop="activatePage\(index\)"/)
   assert.match(source, /:tabindex="cardStates\[index\]\.recallInteractive \? 0 : -1"/)
   assert.match(source, /:aria-hidden="!cardStates\[index\]\.recallInteractive"/)
-  assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*80px/m)
+  assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*none/m)
   assert.match(source, /\.card-page-content\.blocked\s*\{[^}]*pointer-events:\s*none/m)
 })
 ```
@@ -364,7 +364,7 @@ function activatePage(index: number) {
   height: 100dvh;
   overflow: hidden;
   background: #000;
-  perspective: 80px;
+  perspective: none;
 }
 
 .stack-card {

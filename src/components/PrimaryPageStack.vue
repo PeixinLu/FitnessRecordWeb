@@ -88,7 +88,7 @@ function activatePage(index: number) {
   height: 100dvh;
   overflow: hidden;
   background: #000;
-  perspective: 80px;
+  perspective: none;
 }
 
 .stack-card {

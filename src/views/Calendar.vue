@@ -192,7 +192,7 @@ function getMuscleGroup(exerciseId: string): string {
 <style scoped>
 .calendar-page {
   padding: 16px;
-  padding-bottom: 60px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .month-nav {

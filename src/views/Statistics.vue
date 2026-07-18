@@ -40,6 +40,6 @@ const stats = computed(() => {
 <style scoped>
 .statistics-page {
   padding: 16px;
-  padding-bottom: 100px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 </style>
