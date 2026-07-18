@@ -253,10 +253,11 @@ test('primary page stack mounts four fixed pages behind isolated recall buttons'
   }
   assert.match(source, /class="card-page-content"/)
   assert.match(source, /:inert="!cardStates\[index\]\.contentInteractive"/)
-  assert.match(source, /:aria-hidden="String\(!cardStates\[index\]\.contentInteractive\)"/)
+  assert.match(source, /:aria-hidden="!cardStates\[index\]\.contentInteractive"/)
   assert.match(source, /class="card-recall"/)
   assert.match(source, /@click\.stop="activatePage\(index\)"/)
   assert.match(source, /:tabindex="cardStates\[index\]\.recallInteractive \? 0 : -1"/)
+  assert.match(source, /:aria-hidden="!cardStates\[index\]\.recallInteractive"/)
   assert.match(source, /\.card-stage\s*\{[^}]*perspective:\s*80px/m)
   assert.match(source, /\.card-page-content\.blocked\s*\{[^}]*pointer-events:\s*none/m)
 })
@@ -327,7 +328,7 @@ function activatePage(index: number) {
         class="card-page-content"
         :class="{ blocked: !cardStates[index].contentInteractive }"
         :inert="!cardStates[index].contentInteractive"
-        :aria-hidden="String(!cardStates[index].contentInteractive)"
+        :aria-hidden="!cardStates[index].contentInteractive"
       >
         <component :is="page.component" />
       </div>
@@ -337,7 +338,7 @@ function activatePage(index: number) {
         class="card-recall"
         :class="{ enabled: cardStates[index].recallInteractive }"
         :aria-label="`打开${page.label}页面`"
-        :aria-hidden="String(!cardStates[index].recallInteractive)"
+        :aria-hidden="!cardStates[index].recallInteractive"
         :tabindex="cardStates[index].recallInteractive ? 0 : -1"
         @click.stop="activatePage(index)"
       />
