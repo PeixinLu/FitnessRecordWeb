@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch, type Component } from 'vue'
 import Home from '@/views/Home.vue'
 import Calendar from '@/views/Calendar.vue'
 import Statistics from '@/views/Statistics.vue'
@@ -36,6 +36,18 @@ let recallLockedUntil = 0
 const cardStates = computed(() =>
   pages.map((_, index) => getCardVisualState(index, pages.length, stackState.value)),
 )
+const usesStackEnvironment = computed(
+  () => stackState.value.isStacked || stackState.value.isSettling,
+)
+
+function syncBrowserEnvironment(active: boolean) {
+  document.documentElement.classList.toggle('stack-environment', active)
+  document
+    .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    ?.setAttribute('content', active ? '#000000' : '#f5f5f7')
+}
+
+watch(usesStackEnvironment, syncBrowserEnvironment, { immediate: true })
 
 function clearRecallFallback() {
   if (recallFallbackTimer === undefined) return
@@ -99,7 +111,10 @@ function handleCardTransitionEnd(event: TransitionEvent, index: number) {
   finishRecall()
 }
 
-onBeforeUnmount(clearRecallFallback)
+onBeforeUnmount(() => {
+  clearRecallFallback()
+  syncBrowserEnvironment(false)
+})
 </script>
 
 <template>

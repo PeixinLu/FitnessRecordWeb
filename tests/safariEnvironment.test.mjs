@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import test from 'node:test'
+
+test('document opts into Safari edge-to-edge layout with a light fallback theme', async () => {
+  const source = await readFile(path.resolve('index.html'), 'utf8')
+
+  assert.match(source, /name="viewport"[^>]*viewport-fit=cover/)
+  assert.match(source, /<meta name="theme-color" content="#f5f5f7"\s*\/?>/)
+})
+
+test('root surfaces share a dynamic environment background', async () => {
+  const [globalSource, appSource] = await Promise.all([
+    readFile(path.resolve('src/style.css'), 'utf8'),
+    readFile(path.resolve('src/App.vue'), 'utf8'),
+  ])
+
+  assert.match(globalSource, /--app-environment-color:\s*#f5f5f7/)
+  assert.match(globalSource, /:root\.stack-environment\s*\{[^}]*--app-environment-color:\s*#000/m)
+  assert.match(globalSource, /html,[\s\S]*body,[\s\S]*#app\s*\{[^}]*background-color:\s*var\(--app-environment-color\)/m)
+  assert.match(globalSource, /html\.stack-environment[\s\S]*overscroll-behavior-y:\s*none/m)
+  assert.doesNotMatch(appSource, /body\s*\{[^}]*background-color:\s*#f5f5f7/m)
+  assert.doesNotMatch(appSource, /#app\s*\{[^}]*background-color:\s*#f5f5f7/m)
+})
+
+test('stack state keeps Safari chrome black through the settling transition', async () => {
+  const [stackSource, titleSource] = await Promise.all([
+    readFile(path.resolve('src/components/PrimaryPageStack.vue'), 'utf8'),
+    readFile(path.resolve('src/components/PrimaryPageTitle.vue'), 'utf8'),
+  ])
+
+  assert.match(
+    stackSource,
+    /const usesStackEnvironment = computed\(\s*\(\) =>[\s\S]*isStacked[\s\S]*isSettling/,
+  )
+  assert.match(stackSource, /document\.documentElement\.classList\.toggle\('stack-environment', active\)/)
+  assert.match(stackSource, /querySelector<HTMLMetaElement>\('meta\[name="theme-color"\]'\)/)
+  assert.match(stackSource, /setAttribute\('content', active \? '#000000' : '#f5f5f7'\)/)
+  assert.match(stackSource, /watch\(usesStackEnvironment, syncBrowserEnvironment, \{ immediate: true \}\)/)
+  assert.match(stackSource, /syncBrowserEnvironment\(false\)/)
+  assert.match(titleSource, /padding-top:\s*calc\(18px \+ env\(safe-area-inset-top\)\)/)
+})

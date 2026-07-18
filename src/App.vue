@@ -34,12 +34,10 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: #f5f5f7;
 }
 
 #app {
   min-height: 100vh;
-  background-color: #f5f5f7;
 }
 </style>
 

@@ -1,4 +1,13 @@
 /* 基础样式重置 */
+:root {
+  --app-environment-color: #f5f5f7;
+  background-color: var(--app-environment-color);
+}
+
+:root.stack-environment {
+  --app-environment-color: #000;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -11,7 +20,19 @@ body {
 }
 
 /* 移动端优化 */
-html, body {
+html,
+body {
   height: 100%;
   overflow-x: hidden;
+}
+
+html,
+body,
+#app {
+  background-color: var(--app-environment-color);
+}
+
+html.stack-environment,
+html.stack-environment body {
+  overscroll-behavior-y: none;
 }
