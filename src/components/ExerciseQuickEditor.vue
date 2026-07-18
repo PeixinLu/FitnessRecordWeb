@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue"
+import { ref, computed, watch, nextTick } from "vue"
 import { useExerciseStore } from "@/stores/exercise"
 import { showConfirmDialog, showToast } from "vant"
 import { getTemplateLabel } from "@/utils/dataTemplate"
@@ -29,36 +29,17 @@ const editMode = ref<EditMode>("idle")
 const editingExercise = ref<Exercise | null>(null)
 const exerciseName = ref("")
 const inputRef = ref<HTMLInputElement | null>(null)
+const isCheckClick = ref(false)
 
-// --- Keyboard tracking ---
-const keyboardHeight = ref(0)
-const keyboardBarBottom = computed(() => `${Math.max(keyboardHeight.value, 0)}px`)
-
-function handleVisualViewportChange() {
-  const vv = window.visualViewport
-  if (!vv) return
-  const height = window.innerHeight - vv.height - vv.offsetTop
-  keyboardHeight.value = Math.max(0, height)
+function onInputBlur() {
+  // 延时让 ✓ 按钮的 click 事件先触发，避免 blur 抢先清空输入
+  setTimeout(() => {
+    if (!isCheckClick.value && editMode.value !== "idle") {
+      cancelEdit()
+    }
+    isCheckClick.value = false
+  }, 150)
 }
-
-let vvResizeHandler: (() => void) | null = null
-let vvScrollHandler: (() => void) | null = null
-
-onMounted(() => {
-  if (window.visualViewport) {
-    vvResizeHandler = handleVisualViewportChange
-    vvScrollHandler = handleVisualViewportChange
-    window.visualViewport.addEventListener("resize", vvResizeHandler)
-    window.visualViewport.addEventListener("scroll", vvScrollHandler)
-  }
-})
-
-onUnmounted(() => {
-  if (window.visualViewport) {
-    if (vvResizeHandler) window.visualViewport.removeEventListener("resize", vvResizeHandler)
-    if (vvScrollHandler) window.visualViewport.removeEventListener("scroll", vvScrollHandler)
-  }
-})
 
 // --- Reset on popup close ---
 watch(
@@ -68,7 +49,6 @@ watch(
       editMode.value = "idle"
       editingExercise.value = null
       exerciseName.value = ""
-      keyboardHeight.value = 0
     }
   },
 )
@@ -127,7 +107,6 @@ function cancelEdit() {
   editMode.value = "idle"
   editingExercise.value = null
   exerciseName.value = ""
-  keyboardHeight.value = 0
 }
 
 async function removeExercise(id: string) {
@@ -219,36 +198,37 @@ async function removeExercise(id: string) {
           </template>
         </van-swipe-cell>
       </section>
+
+      <!-- Inline input bar at bottom of popup -->
+      <div
+        v-if="editMode !== 'idle'"
+        v-smooth-corners="12"
+        class="input-bar"
+      >
+        <input
+          ref="inputRef"
+          v-model="exerciseName"
+          type="text"
+          class="name-input"
+          :placeholder="editMode === 'adding' ? '输入动作名称' : '编辑动作名称'"
+          enterkeyhint="done"
+          @keyup.enter="saveExercise"
+          @blur="onInputBlur"
+        />
+        <button
+          v-smooth-corners="10"
+          class="check-btn"
+          :class="{ 'check-btn--active': exerciseName.trim().length > 0 }"
+          @touchstart.prevent="isCheckClick = true"
+          @mousedown.prevent="isCheckClick = true"
+          @click="saveExercise"
+          aria-label="保存"
+        >
+          <van-icon name="success" size="18" color="#fff" />
+        </button>
+      </div>
     </div>
   </van-popup>
-
-  <!-- Keyboard-docked input bar -->
-  <div
-    v-if="editMode !== 'idle' && props.show"
-    class="keyboard-input-bar"
-    :style="{ bottom: keyboardBarBottom }"
-  >
-    <div v-smooth-corners="12" class="input-card">
-      <input
-        ref="inputRef"
-        v-model="exerciseName"
-        type="text"
-        class="name-input"
-        :placeholder="editMode === 'adding' ? '输入动作名称' : '编辑动作名称'"
-        enterkeyhint="done"
-        @keyup.enter="saveExercise"
-      />
-      <button
-        v-smooth-corners="10"
-        class="check-btn"
-        :class="{ 'check-btn--active': exerciseName.trim().length > 0 }"
-        @click="saveExercise"
-        aria-label="保存"
-      >
-        <van-icon name="success" size="18" color="#fff" />
-      </button>
-    </div>
-  </div>
 </template>
 
 <style scoped>
@@ -309,7 +289,6 @@ async function removeExercise(id: string) {
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -364,24 +343,17 @@ async function removeExercise(id: string) {
   border-radius: 12px;
 }
 
-/* ===== Keyboard Input Bar ===== */
-.keyboard-input-bar {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  z-index: 10000;
-  transition: bottom 0.15s ease-out;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.input-card {
+/* ===== Inline Input Bar ===== */
+.input-bar {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 0 16px 16px;
   padding: 10px 14px;
-  background: #fff;
+  background: #f5f5f7;
   border-radius: 12px;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
 }
 
 .name-input {
@@ -454,9 +426,8 @@ async function removeExercise(id: string) {
     color: #fff;
   }
 
-  .input-card {
-    background: #2c2c2e;
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3), 0 2px 12px rgba(0, 0, 0, 0.2);
+  .input-bar {
+    background: #3a3a3c;
   }
 
   .name-input {

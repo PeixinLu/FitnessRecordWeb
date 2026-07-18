@@ -96,8 +96,13 @@ watch(
 
 function onNestedEditorVisibility(visible: boolean) {
   nestedEditorOpen.value = visible;
-  emit("nested-editor-open", visible);
+  emit("nested-editor-open", visible || showExerciseEditor.value);
 }
+
+// ExerciseQuickEditor 打开/关闭时也通知主页下沉
+watch(showExerciseEditor, (val) => {
+  emit("nested-editor-open", nestedEditorOpen.value || val);
+});
 
 // ===== 滚轮变化 =====
 function onPickerChange(values: TemplateValues) {
@@ -190,7 +195,7 @@ function closeDrawer() {
   >
     <div
       class="drawer-container"
-      :class="{ 'nested-drawer-open': nestedEditorOpen }"
+      :class="{ 'nested-drawer-open': nestedEditorOpen || showExerciseEditor }"
     >
       <!-- 页面切换容器 -->
       <div
