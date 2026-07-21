@@ -17,11 +17,6 @@ const router = createRouter({
       component: () => import('@/views/EquipmentManagement.vue'),
     },
     {
-      path: '/equipment-management/:equipmentId',
-      name: 'exercise-management',
-      component: () => import('@/views/ExerciseManagement.vue'),
-    },
-    {
       path: '/workout/:date/:exerciseId',
       name: 'workout-detail',
       component: () => import('@/views/WorkoutDetail.vue'),

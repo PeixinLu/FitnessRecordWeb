@@ -24,6 +24,34 @@ class FitnessDatabase extends Dexie {
         }
       })
     })
+    this.version(3).stores({
+      equipments: 'id, name, order',
+      exercises: 'id, name, equipmentId, muscleGroup',
+      records: 'id, date, exerciseId, createdAt',
+    }).upgrade(async tx => {
+      // Backfill order for existing equipment based on creation order (id contains timestamp)
+      const all = await tx.table('equipments').toArray()
+      all.sort((a, b) => a.id.localeCompare(b.id))
+      for (let i = 0; i < all.length; i++) {
+        await tx.table('equipments').update(all[i].id, { order: i })
+      }
+    })
+    this.version(4).stores({
+      equipments: 'id, name, order',
+      exercises: 'id, name, equipmentId, muscleGroup, order',
+      records: 'id, date, exerciseId, createdAt',
+    }).upgrade(async tx => {
+      const all = await tx.table('exercises').toArray()
+      const equipmentIds = [...new Set(all.map(exercise => exercise.equipmentId))]
+      for (const equipmentId of equipmentIds) {
+        const equipmentExercises = all
+          .filter(exercise => exercise.equipmentId === equipmentId)
+          .sort((a, b) => a.id.localeCompare(b.id))
+        for (let i = 0; i < equipmentExercises.length; i++) {
+          await tx.table('exercises').update(equipmentExercises[i].id, { order: i })
+        }
+      }
+    })
   }
 }
 

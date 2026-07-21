@@ -13,6 +13,7 @@ import {
   type WorkoutGroup,
 } from "@/utils/workoutGroups";
 import WorkoutDetail from "@/views/WorkoutDetail.vue";
+import EquipmentManagement from "@/views/EquipmentManagement.vue";
 
 const exerciseStore = useExerciseStore();
 const recordStore = useRecordStore();
@@ -26,8 +27,15 @@ const selectedWorkoutExerciseId = ref("");
 const isEquipmentCollapsed = ref(false);
 const isNestedDrawerOpen = ref(false);
 const isSecondaryPageOpen = computed(
-  () => showDrawer.value || showWorkoutDetail.value,
+  () => showDrawer.value || showWorkoutDetail.value || showEquipmentManager.value,
 );
+
+// 器械管理弹窗
+const showEquipmentManager = ref(false)
+const isEquipmentManagerFlipping = ref(false)
+
+// 更多菜单
+const showMoreMenu = ref(false)
 
 // ===== 器械九宫格 =====
 const equipmentPage = ref(0);
@@ -122,7 +130,21 @@ function onRecordSaved() {
       'nested-secondary-page-open': isSecondaryPageOpen && isNestedDrawerOpen,
     }"
   >
-    <PrimaryPageTitle title="记录" />
+    <div class="home-header">
+      <PrimaryPageTitle title="记录" />
+      <div v-smooth-corners="16" class="header-capsule">
+        <button class="capsule-left" @click="showEquipmentManager = true">
+          <van-icon name="setting-o" size="14" color="#007aff" />
+          <span>器械管理</span>
+        </button>
+        <span class="capsule-divider" />
+        <button class="capsule-right" @click="showMoreMenu = true">
+          <span class="dots-vertical">
+            <span class="dot" /><span class="dot" /><span class="dot" />
+          </span>
+        </button>
+      </div>
+    </div>
 
     <!-- 器械九宫格（固定） -->
     <section
@@ -267,6 +289,42 @@ function onRecordSaved() {
         @nested-editor-open="isNestedDrawerOpen = $event"
       />
     </van-popup>
+
+    <!-- 器械管理弹窗 -->
+    <van-popup
+      v-model:show="showEquipmentManager"
+      v-smooth-corners="38"
+      class="equipment-management-popup"
+      :class="{ 'equipment-management-popup--flipping': isEquipmentManagerFlipping }"
+      teleport="body"
+      position="bottom"
+      round
+      :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
+      :style="{
+        width: 'calc(100% - 16px)',
+        left: '8px',
+        bottom: '8px',
+        height: '90vh',
+        borderRadius: '38px',
+        background: 'transparent',
+        overflowX: 'hidden',
+        '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
+      }"
+    >
+      <EquipmentManagement
+        embedded
+        @close="showEquipmentManager = false"
+        @flip-state-change="isEquipmentManagerFlipping = $event"
+      />
+    </van-popup>
+
+    <!-- 更多菜单 -->
+    <van-action-sheet
+      v-model:show="showMoreMenu"
+      :actions="[{ name: '导出数据' }]"
+      cancel-text="取消"
+    />
   </div>
 </template>
 
@@ -279,6 +337,87 @@ function onRecordSaved() {
   min-height: 0;
   overflow: hidden;
   background: #f5f5f7;
+}
+
+.equipment-management-popup--flipping {
+  overflow: visible !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+
+/* ===== Header with capsule ===== */
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-header :deep(.primary-page-title) {
+  flex: 1;
+  padding-right: 0;
+}
+
+.header-capsule {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.capsule-left,
+.capsule-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  color: #1c1c1e;
+  transition: background 0.1s ease;
+}
+
+.capsule-left:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.capsule-right {
+  padding: 6px 10px;
+}
+
+.capsule-right:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.dots-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.dots-vertical .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.capsule-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 /* ===== 器械区域 ===== */
@@ -571,6 +710,28 @@ function onRecordSaved() {
 
   .records-title {
     color: #fff;
+  }
+
+  .header-capsule {
+    background: rgba(58, 58, 60, 0.76);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .capsule-left {
+    color: #fff;
+  }
+
+  .capsule-left:active,
+  .capsule-right:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .capsule-divider {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .dots-vertical .dot {
+    background: #aeaeb2;
   }
 }
 </style>

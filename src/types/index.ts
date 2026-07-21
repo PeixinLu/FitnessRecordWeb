@@ -5,6 +5,7 @@ export interface Equipment {
   normalizedName?: string
   icon?: string
   source?: 'manual' | 'case'
+  order?: number
 }
 
 // 动作类型
@@ -13,6 +14,7 @@ export interface Exercise {
   name: string
   normalizedName?: string
   equipmentId: string
+  order?: number
   muscleGroup: MuscleGroup
   dataTemplate: DataTemplate
   source?: 'manual' | 'case'

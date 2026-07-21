@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/sortablejs": "^1.15.9",
     "dexie": "^4.4.2",
     "pinia": "^3.0.4",
+    "sortablejs": "^1.15.7",
     "vant": "^4.9.24",
     "vue": "^3.5.32",
     "vue-router": "^4.6.4"

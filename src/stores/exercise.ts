@@ -36,8 +36,17 @@ export const useExerciseStore = defineStore('exercise', () => {
   // 加载所有器械和动作
   async function loadData() {
     await initDefaultData()
-    equipments.value = await db.equipments.toArray()
-    exercises.value = await db.exercises.toArray()
+    const eqs = await db.equipments.toArray()
+    eqs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    equipments.value = eqs
+    const exs = await db.exercises.toArray()
+    exs.sort((a, b) => {
+      if (a.equipmentId !== b.equipmentId) {
+        return a.equipmentId.localeCompare(b.equipmentId)
+      }
+      return (a.order ?? 0) - (b.order ?? 0)
+    })
+    exercises.value = exs
   }
 
   function createId(prefix: string): string {
@@ -49,7 +58,8 @@ export const useExerciseStore = defineStore('exercise', () => {
     if (equipments.value.some(item => (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('器械名称已存在')
     }
-    await db.equipments.add({ id: createId('equipment'), name, normalizedName, source: 'manual' })
+    const maxOrder = equipments.value.reduce((max, eq) => Math.max(max, eq.order ?? 0), -1)
+    await db.equipments.add({ id: createId('equipment'), name, normalizedName, source: 'manual', order: maxOrder + 1 })
     await loadData()
   }
 
@@ -79,7 +89,16 @@ export const useExerciseStore = defineStore('exercise', () => {
     if (exercises.value.some(item => item.equipmentId === input.equipmentId && (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('动作名称已存在')
     }
-    await db.exercises.add({ id: createId('exercise'), ...input, normalizedName, source: 'manual' })
+    const maxOrder = exercises.value
+      .filter(exercise => exercise.equipmentId === input.equipmentId)
+      .reduce((max, exercise) => Math.max(max, exercise.order ?? 0), -1)
+    await db.exercises.add({
+      id: createId('exercise'),
+      ...input,
+      normalizedName,
+      source: 'manual',
+      order: maxOrder + 1,
+    })
     await loadData()
   }
 
@@ -102,16 +121,21 @@ export const useExerciseStore = defineStore('exercise', () => {
     const normalizedName = normalizeEquipmentName(equipmentCase.name)
     let target = equipments.value.find(item => (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)
     if (!target) {
+      const maxOrder = equipments.value.reduce((max, eq) => Math.max(max, eq.order ?? 0), -1)
       target = {
         id: createId('equipment'),
         name: equipmentCase.name,
         normalizedName,
         icon: equipmentCase.icon,
         source: 'case',
+        order: maxOrder + 1,
       }
       await db.equipments.add(target)
     }
     const selectedActions = equipmentCase.actions.filter(action => actionIds.includes(action.id))
+    let nextOrder = exercises.value
+      .filter(exercise => exercise.equipmentId === target.id)
+      .reduce((max, exercise) => Math.max(max, exercise.order ?? 0), -1) + 1
     for (const action of selectedActions) {
       const actionName = normalizeEquipmentName(action.name)
       const exists = exercises.value.some(item => item.equipmentId === target.id && (item.normalizedName ?? normalizeEquipmentName(item.name)) === actionName)
@@ -124,6 +148,7 @@ export const useExerciseStore = defineStore('exercise', () => {
           muscleGroup: action.muscleGroup,
           dataTemplate: action.dataTemplate,
           source: 'case',
+          order: nextOrder++,
         })
       }
     }
@@ -139,6 +164,44 @@ export const useExerciseStore = defineStore('exercise', () => {
     selectedEquipmentId.value = ''
     selectedExerciseId.value = ''
     await loadData()
+  }
+
+  async function reorderEquipments(orderedIds: string[]) {
+    await db.transaction('rw', db.equipments, async () => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.equipments.update(orderedIds[i], { order: i })
+      }
+    })
+    // Update local state without full reload
+    for (let i = 0; i < orderedIds.length; i++) {
+      const eq = equipments.value.find(e => e.id === orderedIds[i])
+      if (eq) eq.order = i
+    }
+    equipments.value.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  }
+
+  async function reorderExercises(equipmentId: string, orderedIds: string[]) {
+    const equipmentExerciseIds = new Set(
+      exercises.value
+        .filter(exercise => exercise.equipmentId === equipmentId)
+        .map(exercise => exercise.id),
+    )
+    const validOrderedIds = orderedIds.filter(id => equipmentExerciseIds.has(id))
+    await db.transaction('rw', db.exercises, async () => {
+      for (let i = 0; i < validOrderedIds.length; i++) {
+        await db.exercises.update(validOrderedIds[i], { order: i })
+      }
+    })
+    for (let i = 0; i < validOrderedIds.length; i++) {
+      const exercise = exercises.value.find(item => item.id === validOrderedIds[i])
+      if (exercise) exercise.order = i
+    }
+    exercises.value.sort((a, b) => {
+      if (a.equipmentId !== b.equipmentId) {
+        return a.equipmentId.localeCompare(b.equipmentId)
+      }
+      return (a.order ?? 0) - (b.order ?? 0)
+    })
   }
 
   return {
@@ -158,5 +221,7 @@ export const useExerciseStore = defineStore('exercise', () => {
     deleteExercise,
     addCaseEquipment,
     resetAllData,
+    reorderEquipments,
+    reorderExercises,
   }
 })

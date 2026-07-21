@@ -9,7 +9,11 @@ interface SmoothCornersState {
 }
 
 function applyMask(el: HTMLElement, state: SmoothCornersState): void {
-  const { width, height } = el.getBoundingClientRect()
+  // Use layout dimensions rather than the transformed visual bounds. Reading
+  // getBoundingClientRect() while an ancestor is flipping would bake the
+  // projected (temporarily compressed) size into the SVG mask.
+  const width = el.offsetWidth
+  const height = el.offsetHeight
   if (width === 0 || height === 0) return
 
   const style = smoothCornerStyle(width, height, state.radius)
