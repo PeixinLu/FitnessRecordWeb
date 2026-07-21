@@ -685,6 +685,7 @@ onUnmounted(() => {
                   <van-swipe-cell
                     v-for="exercise in getEquipmentExercises(equipment.id)"
                     :key="exercise.id"
+                    stop-propagation
                   >
                     <div
                       v-smooth-corners="12"
@@ -717,40 +718,28 @@ onUnmounted(() => {
                   <van-icon name="plus" size="16" color="#007aff" />
                   <span>新增动作</span>
                 </div>
-
-                <div class="equipment-actions">
-                  <van-button
-                    size="small"
-                    plain
-                    type="primary"
-                    class="equipment-action-btn"
-                    @click.stop="openEditEquipment(equipment.id, equipment.name)"
-                  >
-                    编辑名称
-                  </van-button>
-                  <van-button
-                    size="small"
-                    plain
-                    type="danger"
-                    class="equipment-action-btn"
-                    @click.stop="removeEquipment(equipment.id)"
-                  >
-                    {{ isEquipmentFromCase(equipment.id) ? '移除' : '删除' }}
-                  </van-button>
-                </div>
               </div>
             </div>
           </Transition>
         </div>
 
         <template #right>
-          <van-button
-            v-smooth-corners="14"
-            class="swipe-remove-btn"
-            type="danger"
-            text="移除"
-            @click="removeEquipment(equipment.id)"
-          />
+          <div class="equipment-swipe-actions">
+            <van-button
+              v-smooth-corners="14"
+              class="equipment-swipe-action equipment-swipe-edit"
+              type="primary"
+              text="编辑"
+              @click.stop="openEditEquipment(equipment.id, equipment.name)"
+            />
+            <van-button
+              v-smooth-corners="14"
+              class="equipment-swipe-action"
+              type="danger"
+              :text="isEquipmentFromCase(equipment.id) ? '移除' : '删除'"
+              @click.stop="removeEquipment(equipment.id)"
+            />
+          </div>
         </template>
       </van-swipe-cell>
       </div>
@@ -1487,27 +1476,25 @@ onUnmounted(() => {
   background: rgba(0, 122, 255, 0.12);
 }
 
-/* ===== Equipment actions ===== */
-.equipment-actions {
+/* ===== Equipment swipe actions ===== */
+.equipment-swipe-actions {
   display: flex;
   gap: 8px;
-}
-
-.equipment-actions .van-button {
-  flex: 1;
-}
-
-.equipment-action-btn {
-  border-radius: 10px !important;
-}
-
-/* ===== Swipe remove ===== */
-.swipe-remove-btn {
   height: 100%;
   min-height: 100%;
   margin-left: 8px;
-  padding: 0 22px;
+}
+
+.equipment-swipe-action {
+  height: 100%;
+  min-height: 100%;
+  padding: 0 20px;
   border-radius: 14px;
+}
+
+.equipment-swipe-edit {
+  background: #007aff;
+  border-color: #007aff;
 }
 
 /* ===== Case library cards ===== */

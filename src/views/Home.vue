@@ -456,17 +456,25 @@ function onRecordSaved() {
   padding: 8px;
   min-height: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow:
+    0 1px 2px rgba(30, 35, 45, 0.06),
+    0 4px 10px rgba(30, 35, 45, 0.05);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .equipment-card:active {
   transform: scale(0.95);
   background: #e8e8ea;
+  box-shadow: 0 1px 2px rgba(30, 35, 45, 0.05);
 }
 
 .equipment-card.disabled {
   cursor: default;
   opacity: 0.45;
+  box-shadow: none;
 }
 
 .equipment-card.disabled:active {
@@ -686,10 +694,18 @@ function onRecordSaved() {
 
   .equipment-card {
     background: #3a3a3c;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.18),
+      0 4px 10px rgba(0, 0, 0, 0.14);
   }
 
   .equipment-card:active {
     background: #48484a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  }
+
+  .equipment-card.disabled {
+    box-shadow: none;
   }
 
   .equipment-name {
