@@ -6,6 +6,7 @@ import {
   type TemplateFieldKey,
 } from "@/utils/dataTemplate";
 import NumberWheelPicker from "@/components/NumberWheelPicker.vue";
+import ImmersivePopup from "@/components/ImmersivePopup.vue";
 
 export interface EditableSetDetail {
   id: string;
@@ -116,13 +117,12 @@ function saveEditor() {
     <van-empty v-if="sets.length === 0" description="没有组数据" />
   </section>
 
-  <van-popup
+  <ImmersivePopup
     v-model:show="showEditor"
-    v-smooth-corners="24"
+    :smooth-corners="24"
     teleport="body"
     position="bottom"
     round
-    :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
     :style="{
       width: 'calc(100% - 16px)',
       left: '8px',
@@ -133,7 +133,10 @@ function saveEditor() {
       '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
     }"
   >
-    <div class="edit-set-popup">
+    <div
+      v-pull-to-dismiss="() => (showEditor = false)"
+      class="edit-set-popup"
+    >
       <header class="edit-header">
         <h3 class="edit-title">编辑组别</h3>
       </header>
@@ -156,7 +159,7 @@ function saveEditor() {
         </button>
       </footer>
     </div>
-  </van-popup>
+  </ImmersivePopup>
 </template>
 
 <style scoped>

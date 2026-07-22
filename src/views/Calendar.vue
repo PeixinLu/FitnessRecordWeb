@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useRecordStore } from '@/stores/record'
 import { useExerciseStore } from '@/stores/exercise'
 import { formatRecordDetail } from '@/utils/dataTemplate'
-import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
+import PrimaryPageHeader from '@/components/PrimaryPageHeader.vue'
 
 const recordStore = useRecordStore()
 const exerciseStore = useExerciseStore()
@@ -121,7 +121,7 @@ function getMuscleGroup(exerciseId: string): string {
 
 <template>
   <div class="calendar-page">
-    <PrimaryPageTitle title="日历" />
+    <PrimaryPageHeader title="日历" />
 
     <div class="primary-page-body">
       <!-- 月份导航 -->
@@ -197,8 +197,12 @@ function getMuscleGroup(exerciseId: string): string {
 
 <style scoped>
 .calendar-page {
+  height: 100%;
   padding: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: #f5f5f7;
+  -webkit-overflow-scrolling: touch;
 }
 
 .primary-page-body {

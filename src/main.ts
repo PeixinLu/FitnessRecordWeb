@@ -12,6 +12,7 @@ import './style.css'
 
 // 自定义指令
 import { vSmoothCorners } from './directives/smoothCorners'
+import { vPullToDismiss } from './directives/pullToDismiss'
 
 const app = createApp(App)
 
@@ -20,5 +21,6 @@ app.use(router)
 app.use(vant)
 
 app.directive('smooth-corners', vSmoothCorners)
+app.directive('pull-to-dismiss', vPullToDismiss)
 
 app.mount('#app')

@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from "vue"
 import { useExerciseStore } from "@/stores/exercise"
 import { showConfirmDialog, showToast } from "vant"
+import ImmersivePopup from "@/components/ImmersivePopup.vue"
 import { getTemplateLabel } from "@/utils/dataTemplate"
 import type { Exercise, MuscleGroup, DataTemplate } from "@/types"
 
@@ -30,6 +31,11 @@ const editingExercise = ref<Exercise | null>(null)
 const exerciseName = ref("")
 const inputRef = ref<HTMLInputElement | null>(null)
 const isCheckClick = ref(false)
+
+function closeEditor() {
+  emit("update:show", false)
+  emit("close")
+}
 
 function onInputBlur() {
   // 延时让 ✓ 按钮的 click 事件先触发，避免 blur 抢先清空输入
@@ -126,13 +132,12 @@ async function removeExercise(id: string) {
 </script>
 
 <template>
-  <van-popup
+  <ImmersivePopup
     :show="props.show"
-    v-smooth-corners="24"
+    :smooth-corners="24"
     teleport="body"
     position="bottom"
     round
-    :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
     :style="{
       width: 'calc(100% - 16px)',
       left: '8px',
@@ -145,7 +150,7 @@ async function removeExercise(id: string) {
     }"
     @update:show="emit('update:show', $event)"
   >
-    <div class="manager-container">
+    <div v-pull-to-dismiss="closeEditor" class="manager-container">
       <!-- Header -->
       <header class="manager-header">
         <h2 class="manager-title">管理动作</h2>
@@ -228,7 +233,7 @@ async function removeExercise(id: string) {
         </button>
       </div>
     </div>
-  </van-popup>
+  </ImmersivePopup>
 </template>
 
 <style scoped>

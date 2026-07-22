@@ -3,7 +3,7 @@ import { useRecordStore } from '@/stores/record'
 import { useExerciseStore } from '@/stores/exercise'
 import { showToast } from 'vant'
 import { formatRecordDetail } from '@/utils/dataTemplate'
-import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
+import PrimaryPageHeader from '@/components/PrimaryPageHeader.vue'
 
 const recordStore = useRecordStore()
 const exerciseStore = useExerciseStore()
@@ -74,7 +74,7 @@ import { showConfirmDialog } from 'vant'
 
 <template>
   <div class="settings-page">
-    <PrimaryPageTitle title="设置" />
+    <PrimaryPageHeader title="设置" />
 
     <div class="primary-page-body">
       <van-cell-group inset title="导出数据">
@@ -127,8 +127,12 @@ import { showConfirmDialog } from 'vant'
 
 <style scoped>
 .settings-page {
+  height: 100%;
   padding: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: #f5f5f7;
+  -webkit-overflow-scrolling: touch;
 }
 
 .primary-page-body {

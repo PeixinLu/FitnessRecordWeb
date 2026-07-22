@@ -5,6 +5,7 @@ import { useRecordStore } from "@/stores/record";
 import SetPicker from "@/components/SetPicker.vue";
 import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
 import ExerciseQuickEditor from "@/components/ExerciseQuickEditor.vue";
+import ImmersivePopup from "@/components/ImmersivePopup.vue";
 import { showToast } from "vant";
 import { getTemplateFields, type TemplateFieldKey } from "@/utils/dataTemplate";
 
@@ -174,13 +175,12 @@ function closeDrawer() {
 </script>
 
 <template>
-  <van-popup
+  <ImmersivePopup
     :show="props.show"
-    v-smooth-corners="24"
+    :smooth-corners="24"
     teleport="body"
     position="bottom"
     round
-    :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
     :style="{
       width: 'calc(100% - 16px)',
       left: '8px',
@@ -194,6 +194,7 @@ function closeDrawer() {
     @update:show="emit('update:show', $event)"
   >
     <div
+      v-pull-to-dismiss="closeDrawer"
       class="drawer-container"
       :class="{ 'nested-drawer-open': nestedEditorOpen || showExerciseEditor }"
     >
@@ -290,7 +291,7 @@ function closeDrawer() {
         </div>
       </div>
     </div>
-  </van-popup>
+  </ImmersivePopup>
 
   <ExerciseQuickEditor
     v-model:show="showExerciseEditor"

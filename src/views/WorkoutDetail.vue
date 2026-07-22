@@ -78,6 +78,7 @@ async function removeRecord(id: string) {
 
 <template>
   <div
+    v-pull-to-dismiss="{ onDismiss: closeDetail, disabled: !embedded }"
     class="drawer-container"
     :class="{ 'nested-drawer-open': nestedEditorOpen }"
   >

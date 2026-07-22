@@ -16,6 +16,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <div id="app-popup-root" />
   <div class="app-container">
     <main class="main-content">
       <router-view />
@@ -45,6 +46,14 @@ body {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+#app-popup-root {
+  position: absolute;
+  z-index: 2000;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .main-content {

@@ -8,6 +8,7 @@ import { EQUIPMENT_CASES, normalizeEquipmentName, type EquipmentCase } from '@/d
 import { getEquipmentIcon } from '@/utils/equipmentIcon'
 import { MUSCLE_GROUPS, type DataTemplate, type MuscleGroup, type Exercise } from '@/types'
 import { DATA_TEMPLATE_OPTIONS, getTemplateLabel } from '@/utils/dataTemplate'
+import ImmersivePopup from '@/components/ImmersivePopup.vue'
 
 const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{
@@ -447,6 +448,10 @@ onUnmounted(() => {
 
 <template>
   <div
+    v-pull-to-dismiss="{
+      onDismiss: onNavBack,
+      disabled: !embedded || isFlipping,
+    }"
     class="management-flip-stage"
     :class="[
       { 'management-flip-stage--flipping': isFlipping },
@@ -781,13 +786,12 @@ onUnmounted(() => {
     </div>
 
     <!-- Equipment create/edit card popup -->
-    <van-popup
+    <ImmersivePopup
       v-model:show="showEquipmentEditor"
-      v-smooth-corners="24"
+      :smooth-corners="24"
       teleport="body"
       position="bottom"
       round
-      :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
       :style="{
         width: 'calc(100% - 16px)',
         left: '8px',
@@ -798,7 +802,11 @@ onUnmounted(() => {
         '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
       }"
     >
-      <div v-smooth-corners="24" class="equipment-editor-card">
+      <div
+        v-smooth-corners="24"
+        v-pull-to-dismiss="() => (showEquipmentEditor = false)"
+        class="equipment-editor-card"
+      >
         <div class="editor-card-header">
           <span class="editor-card-title">{{ editingEquipmentId ? '编辑器械' : '新建器械' }}</span>
           <button
@@ -821,16 +829,15 @@ onUnmounted(() => {
           @keyup.enter="saveEquipment"
         />
       </div>
-    </van-popup>
+    </ImmersivePopup>
 
     <!-- Exercise edit card popup -->
-    <van-popup
+    <ImmersivePopup
       v-model:show="showExerciseEditor"
-      v-smooth-corners="24"
+      :smooth-corners="24"
       teleport="body"
       position="bottom"
       round
-      :overlay-style="{ background: 'rgba(0, 0, 0, 0.2)' }"
       :style="{
         width: 'calc(100% - 16px)',
         left: '8px',
@@ -841,7 +848,11 @@ onUnmounted(() => {
         '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
       }"
     >
-      <div v-smooth-corners="24" class="exercise-editor-card">
+      <div
+        v-smooth-corners="24"
+        v-pull-to-dismiss="() => (showExerciseEditor = false)"
+        class="exercise-editor-card"
+      >
         <div class="editor-card-header">
           <span class="editor-card-title">{{ editingExerciseId ? '编辑动作' : '新增动作' }}</span>
           <button
@@ -888,7 +899,7 @@ onUnmounted(() => {
           >{{ option.label }}</button>
         </div>
       </div>
-    </van-popup>
+    </ImmersivePopup>
     </div>
   </div>
 </template>

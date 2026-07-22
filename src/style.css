@@ -5,8 +5,23 @@
   background-color: var(--app-environment-color);
 }
 
-:root.stack-environment {
-  --app-environment-color: #000;
+:root.immersive-popup-open {
+  --app-environment-color: #c4c4c6;
+  --app-surface-alpha: 0.52;
+}
+
+html.immersive-popup-open body,
+html.immersive-popup-open #app,
+html.immersive-popup-open .home-page {
+  background: transparent;
+}
+
+html.immersive-popup-open .primary-page-menu-capsule,
+html.immersive-popup-open .equipment-card,
+html.immersive-popup-open .record-item,
+html.immersive-popup-open .record-icon,
+html.immersive-popup-open .debug-dialog-button {
+  background: rgba(255, 255, 255, var(--app-surface-alpha));
 }
 
 * {
@@ -36,9 +51,29 @@ body,
   transition: background-color var(--app-environment-transition-duration) ease;
 }
 
-html.stack-environment,
-html.stack-environment body {
-  overscroll-behavior-y: none;
+#app {
+  position: relative;
+}
+
+/* iOS-style grabber for card popups that support pull-to-dismiss. */
+.pull-to-dismiss::before {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  z-index: 3;
+  width: 36px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(60, 60, 67, 0.22);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pull-to-dismiss::before {
+    background: rgba(235, 235, 245, 0.3);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

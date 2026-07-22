@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRecordStore } from '@/stores/record'
-import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
+import PrimaryPageHeader from '@/components/PrimaryPageHeader.vue'
 
 const recordStore = useRecordStore()
 
@@ -28,7 +28,7 @@ const stats = computed(() => {
 
 <template>
   <div class="statistics-page">
-    <PrimaryPageTitle title="统计" />
+    <PrimaryPageHeader title="统计" />
 
     <div class="primary-page-body">
       <van-cell-group inset title="训练统计">
@@ -44,8 +44,12 @@ const stats = computed(() => {
 
 <style scoped>
 .statistics-page {
+  height: 100%;
   padding: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: #f5f5f7;
+  -webkit-overflow-scrolling: touch;
 }
 
 .primary-page-body {
