@@ -19,8 +19,7 @@ html.immersive-popup-open .home-page {
 html.immersive-popup-open .primary-page-menu-capsule,
 html.immersive-popup-open .equipment-card,
 html.immersive-popup-open .record-item,
-html.immersive-popup-open .record-icon,
-html.immersive-popup-open .debug-dialog-button {
+html.immersive-popup-open .record-icon {
   background: rgba(255, 255, 255, var(--app-surface-alpha));
 }
 

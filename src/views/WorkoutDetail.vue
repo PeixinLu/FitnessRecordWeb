@@ -14,6 +14,8 @@ const props = defineProps<{
   date?: string;
   exerciseId?: string;
   embedded?: boolean;
+  headerSafeSpace?: number;
+  footerSafeSpace?: number;
 }>();
 const emit = defineEmits<{
   close: [];
@@ -78,12 +80,11 @@ async function removeRecord(id: string) {
 
 <template>
   <div
-    v-pull-to-dismiss="{ onDismiss: closeDetail, disabled: !embedded }"
     class="drawer-container"
-    :class="{ 'nested-drawer-open': nestedEditorOpen }"
+    :class="{ 'nested-drawer-open': nestedEditorOpen && !embedded }"
   >
     <div class="page">
-      <header class="drawer-header">
+      <header v-if="!embedded" class="drawer-header">
         <h2 class="detail-title">
           {{ exerciseName }} · {{ records.length }}组
         </h2>
@@ -92,12 +93,14 @@ async function removeRecord(id: string) {
       <SetDetailsEditor
         :sets="records"
         :fields="detailFields"
+        :content-padding-top="embedded ? headerSafeSpace : 0"
+        :content-padding-bottom="embedded ? footerSafeSpace : 0"
         @update="updateSet"
         @delete="removeRecord"
         @editor-visibility="onNestedEditorVisibility"
       />
 
-      <footer class="drawer-footer">
+      <footer v-if="!embedded" class="drawer-footer">
         <button
           v-smooth-corners="12"
           class="btn btn-secondary"

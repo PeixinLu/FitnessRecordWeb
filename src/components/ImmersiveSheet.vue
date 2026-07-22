@@ -33,6 +33,7 @@ const props = withDefaults(
     ariaLabel?: string
     zIndex?: number
     elevation?: SheetElevation
+    recessed?: boolean
   }>(),
   {
     position: 'bottom',
@@ -45,6 +46,7 @@ const props = withDefaults(
     ariaLabel: '弹窗',
     zIndex: 2000,
     elevation: 'standard',
+    recessed: false,
   },
 )
 
@@ -79,6 +81,15 @@ const normalizedHeight = computed(() => {
   return typeof props.height === 'number' ? `${props.height}px` : props.height
 })
 
+const frameTransform = computed(() => {
+  const recessedOffset = props.recessed ? 8 : 0
+  const translateY = dragOffset.value + recessedOffset
+  const transforms: string[] = []
+  if (translateY) transforms.push(`translate3d(0, ${translateY}px, 0)`)
+  if (props.recessed) transforms.push('scale3d(0.965, 0.965, 1)')
+  return transforms.length ? transforms.join(' ') : undefined
+})
+
 const panelStyle = computed(() => ({
   '--sheet-safe-margin': `${props.safeMargin}px`,
   '--sheet-radius': `${props.radius}px`,
@@ -89,9 +100,7 @@ const panelStyle = computed(() => ({
     ? `${props.footerSafeSpace}px`
     : '0px',
   height: normalizedHeight.value,
-  transform: dragOffset.value
-    ? `translate3d(0, ${dragOffset.value}px, 0)`
-    : undefined,
+  transform: frameTransform.value,
 }))
 
 function enterEnvironment(): void {
@@ -266,6 +275,7 @@ onBeforeUnmount(() => {
             {
               'immersive-sheet-frame--dragging': dragging,
               'immersive-sheet-frame--sized': normalizedHeight !== undefined,
+              'immersive-sheet-frame--recessed': props.recessed,
             },
           ]"
           :style="panelStyle"
@@ -310,6 +320,12 @@ onBeforeUnmount(() => {
                 <slot name="footer" />
               </div>
             </footer>
+
+            <div
+              class="immersive-sheet-recessed-scrim"
+              :class="{ 'immersive-sheet-recessed-scrim--visible': props.recessed }"
+              aria-hidden="true"
+            />
           </section>
         </div>
       </Transition>
@@ -334,9 +350,7 @@ onBeforeUnmount(() => {
 }
 
 .immersive-sheet-frame {
-  --sheet-frame-shadow:
-    0 10px 20px rgba(0, 0, 0, 0.12),
-    0 2px 5px rgba(0, 0, 0, 0.08);
+  --sheet-frame-shadow: none;
   position: absolute;
   right: var(--sheet-safe-margin);
   left: var(--sheet-safe-margin);
@@ -349,6 +363,8 @@ onBeforeUnmount(() => {
   margin-inline: auto;
   isolation: isolate;
   pointer-events: auto;
+  transform-origin: center center;
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
@@ -505,6 +521,20 @@ onBeforeUnmount(() => {
   corner-shape: superellipse(1.2);
 }
 
+.immersive-sheet-recessed-scrim {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  background: rgba(60, 60, 67, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.immersive-sheet-recessed-scrim--visible {
+  opacity: 1;
+}
+
 .immersive-sheet-click-layer-enter-active,
 .immersive-sheet-click-layer-leave-active {
   transition: opacity 180ms ease;
@@ -542,7 +572,8 @@ onBeforeUnmount(() => {
   .immersive-sheet-bottom-enter-active,
   .immersive-sheet-bottom-leave-active,
   .immersive-sheet-top-enter-active,
-  .immersive-sheet-top-leave-active {
+  .immersive-sheet-top-leave-active,
+  .immersive-sheet-recessed-scrim {
     transition-duration: 0.01ms;
   }
 }

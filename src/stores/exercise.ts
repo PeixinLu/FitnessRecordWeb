@@ -59,8 +59,10 @@ export const useExerciseStore = defineStore('exercise', () => {
       throw new Error('器械名称已存在')
     }
     const maxOrder = equipments.value.reduce((max, eq) => Math.max(max, eq.order ?? 0), -1)
-    await db.equipments.add({ id: createId('equipment'), name, normalizedName, source: 'manual', order: maxOrder + 1 })
+    const id = createId('equipment')
+    await db.equipments.add({ id, name, normalizedName, source: 'manual', order: maxOrder + 1 })
     await loadData()
+    return id
   }
 
   async function updateEquipment(id: string, name: string) {
@@ -92,14 +94,16 @@ export const useExerciseStore = defineStore('exercise', () => {
     const maxOrder = exercises.value
       .filter(exercise => exercise.equipmentId === input.equipmentId)
       .reduce((max, exercise) => Math.max(max, exercise.order ?? 0), -1)
+    const id = createId('exercise')
     await db.exercises.add({
-      id: createId('exercise'),
+      id,
       ...input,
       normalizedName,
       source: 'manual',
       order: maxOrder + 1,
     })
     await loadData()
+    return id
   }
 
   async function updateExercise(id: string, input: ExerciseInput) {
@@ -153,6 +157,7 @@ export const useExerciseStore = defineStore('exercise', () => {
       }
     }
     await loadData()
+    return target.id
   }
 
   async function resetAllData() {

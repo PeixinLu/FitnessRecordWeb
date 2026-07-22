@@ -4,7 +4,6 @@ import { useExerciseStore } from "@/stores/exercise";
 import { useRecordStore } from "@/stores/record";
 import { showConfirmDialog, showToast } from "vant";
 import EquipmentDrawer from "@/components/EquipmentDrawer.vue";
-import CenterDebugDialog from "@/components/CenterDebugDialog.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import PrimaryPageHeader from "@/components/PrimaryPageHeader.vue";
 import { getEquipmentIcon } from "@/utils/equipmentIcon";
@@ -33,8 +32,13 @@ const isSecondaryPageOpen = computed(
 // 器械管理弹窗
 const showEquipmentManager = ref(false)
 const isEquipmentManagerFlipping = ref(false)
-
-const showCenterDebugDialog = ref(false)
+const equipmentManagerTargetEquipmentId = ref('')
+const equipmentManagerTargetExerciseId = ref('')
+const equipmentManagerTargetRequestKey = ref(0)
+const pendingEquipmentManagementTarget = ref<{
+  equipmentId: string
+  exerciseId: string
+} | null>(null)
 
 // ===== 器械九宫格 =====
 const equipmentPage = ref(0);
@@ -80,6 +84,17 @@ const todayWorkoutGroups = computed(() =>
   groupRecordsByExercise(todayRecords.value),
 );
 
+const selectedWorkoutGroup = computed(() =>
+  todayWorkoutGroups.value.find(
+    (group) => group.exerciseId === selectedWorkoutExerciseId.value,
+  ),
+);
+
+const selectedWorkoutTitle = computed(() => {
+  const group = selectedWorkoutGroup.value;
+  return group ? `${group.exerciseName} · ${group.records.length}组` : "训练详情";
+});
+
 function getGroupEquipmentIcon(group: WorkoutGroup): string | undefined {
   const exercise = exerciseStore.exercises.find(
     (item) => item.id === group.exerciseId,
@@ -115,10 +130,33 @@ function onDrawerClose() {
   showDrawer.value = false;
 }
 
-function openEquipmentManagementFromDrawer() {
+function openEquipmentManagement(
+  equipmentId = '',
+  exerciseId = '',
+): void {
+  equipmentManagerTargetEquipmentId.value = equipmentId
+  equipmentManagerTargetExerciseId.value = exerciseId
+  equipmentManagerTargetRequestKey.value += 1
+  showEquipmentManager.value = true
+}
+
+function openEquipmentManagementFromDrawer(
+  equipmentId: string,
+  exerciseId?: string,
+) {
+  pendingEquipmentManagementTarget.value = {
+    equipmentId,
+    exerciseId: exerciseId ?? '',
+  }
   showDrawer.value = false
   isNestedDrawerOpen.value = false
-  showEquipmentManager.value = true
+}
+
+function onEquipmentDrawerClosed(): void {
+  const target = pendingEquipmentManagementTarget.value
+  if (!target) return
+  pendingEquipmentManagementTarget.value = null
+  openEquipmentManagement(target.equipmentId, target.exerciseId)
 }
 
 // 记录保存成功
@@ -139,7 +177,7 @@ function onRecordSaved() {
       <template #action>
         <button
           class="primary-page-header-action"
-          @click="showEquipmentManager = true"
+          @click="openEquipmentManagement()"
         >
           <van-icon name="setting-o" size="14" color="#007aff" />
           <span>器械管理</span>
@@ -160,7 +198,7 @@ function onRecordSaved() {
         <van-button
           type="primary"
           size="small"
-          @click="showEquipmentManager = true"
+          @click="openEquipmentManagement()"
           >去添加器械</van-button
         >
       </van-empty>
@@ -213,16 +251,7 @@ function onRecordSaved() {
     <section class="records-section" @scroll="onRecordsScroll">
       <div class="records-header">
         <span class="records-title">今日训练</span>
-        <div class="records-header-actions">
-          <span class="records-count">{{ todayWorkoutGroups.length }}个动作</span>
-          <button
-            class="debug-dialog-button"
-            type="button"
-            @click="showCenterDebugDialog = true"
-          >
-            弹窗调试
-          </button>
-        </div>
+        <span class="records-count">{{ todayWorkoutGroups.length }}个动作</span>
       </div>
 
       <div class="records-list">
@@ -264,13 +293,12 @@ function onRecordSaved() {
       </div>
     </section>
 
-    <CenterDebugDialog v-model:show="showCenterDebugDialog" />
-
     <!-- 器械动作抽屉 -->
     <EquipmentDrawer
       v-model:show="showDrawer"
       :equipment-id="selectedEquipmentId"
       @close="onDrawerClose"
+      @closed="onEquipmentDrawerClosed"
       @saved="onRecordSaved"
       @nested-editor-open="isNestedDrawerOpen = $event"
       @open-equipment-management="openEquipmentManagementFromDrawer"
@@ -280,15 +308,56 @@ function onRecordSaved() {
       v-model:show="showWorkoutDetail"
       height="80%"
       :radius="24"
+      :footer-safe-space="100"
+      :recessed="isNestedDrawerOpen"
+      :swipe-to-dismiss="!isNestedDrawerOpen"
+      swipe-handle=".immersive-sheet-header"
       aria-label="训练记录详情"
     >
-      <WorkoutDetail
-        embedded
-        :date="recordStore.getTodayDate()"
-        :exercise-id="selectedWorkoutExerciseId"
-        @close="showWorkoutDetail = false"
-        @nested-editor-open="isNestedDrawerOpen = $event"
-      />
+      <template #header-left>
+        <button
+          class="workout-detail-quiet-action"
+          type="button"
+          @click="showWorkoutDetail = false"
+        >
+          关闭
+        </button>
+      </template>
+
+      <template #header>
+        {{ selectedWorkoutTitle }}
+      </template>
+
+      <template #default="{ headerSafeSpace, footerSafeSpace }">
+        <WorkoutDetail
+          embedded
+          :date="recordStore.getTodayDate()"
+          :exercise-id="selectedWorkoutExerciseId"
+          :header-safe-space="headerSafeSpace"
+          :footer-safe-space="footerSafeSpace"
+          @close="showWorkoutDetail = false"
+          @nested-editor-open="isNestedDrawerOpen = $event"
+        />
+      </template>
+
+      <template #footer>
+        <div class="workout-detail-actions">
+          <button
+            class="workout-detail-cancel"
+            type="button"
+            @click="showWorkoutDetail = false"
+          >
+            取消
+          </button>
+          <button
+            class="workout-detail-confirm"
+            type="button"
+            @click="showWorkoutDetail = false"
+          >
+            完成 <span>✓</span>
+          </button>
+        </div>
+      </template>
     </ImmersiveSheet>
 
     <!-- 器械管理弹窗 -->
@@ -304,6 +373,9 @@ function onRecordSaved() {
     >
       <EquipmentManagement
         embedded
+        :target-equipment-id="equipmentManagerTargetEquipmentId"
+        :target-exercise-id="equipmentManagerTargetExerciseId"
+        :target-request-key="equipmentManagerTargetRequestKey"
         @close="showEquipmentManager = false"
         @flip-state-change="isEquipmentManagerFlipping = $event"
       />
@@ -499,31 +571,51 @@ function onRecordSaved() {
   color: #8e8e93;
 }
 
-.records-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.debug-dialog-button {
-  padding: 6px 10px;
-  border: 1px solid rgba(0, 122, 255, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.76);
-  color: #007aff;
-  font: inherit;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.debug-dialog-button:active {
-  background: rgba(0, 122, 255, 0.1);
-}
-
 .records-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.workout-detail-quiet-action {
+  min-width: 52px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(242, 242, 247, 0.82);
+  color: #007aff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.workout-detail-actions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 0.7fr 1.3fr;
+  gap: 10px;
+}
+
+.workout-detail-actions button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 600;
+}
+
+.workout-detail-cancel {
+  background: rgba(242, 242, 247, 0.9);
+  color: #636366;
+}
+
+.workout-detail-confirm {
+  background: #007aff;
+  color: #fff;
+}
+
+.workout-detail-confirm span {
+  margin-left: 4px;
 }
 
 .record-item {

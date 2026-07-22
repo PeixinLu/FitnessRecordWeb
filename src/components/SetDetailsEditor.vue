@@ -6,7 +6,7 @@ import {
   type TemplateFieldKey,
 } from "@/utils/dataTemplate";
 import NumberWheelPicker from "@/components/NumberWheelPicker.vue";
-import ImmersivePopup from "@/components/ImmersivePopup.vue";
+import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 
 export interface EditableSetDetail {
   id: string;
@@ -21,6 +21,8 @@ type TemplateValues = Record<TemplateFieldKey, number>;
 const props = defineProps<{
   sets: EditableSetDetail[];
   fields: TemplateField[];
+  contentPaddingTop?: number;
+  contentPaddingBottom?: number;
 }>();
 
 const emit = defineEmits<{
@@ -95,7 +97,13 @@ function saveEditor() {
 </script>
 
 <template>
-  <section class="sets-section">
+  <section
+    class="sets-section"
+    :style="{
+      paddingTop: `${props.contentPaddingTop ?? 0}px`,
+      paddingBottom: `${props.contentPaddingBottom ?? 0}px`,
+    }"
+  >
     <van-swipe-cell v-for="(detail, index) in sets" :key="detail.id">
       <div v-smooth-corners="12" class="set-item" @click="openEditor(detail)">
         <span class="set-label">第{{ index + 1 }}组</span>
@@ -117,38 +125,41 @@ function saveEditor() {
     <van-empty v-if="sets.length === 0" description="没有组数据" />
   </section>
 
-  <ImmersivePopup
+  <ImmersiveSheet
     v-model:show="showEditor"
-    :smooth-corners="24"
-    teleport="body"
     position="bottom"
-    round
-    :style="{
-      width: 'calc(100% - 16px)',
-      left: '8px',
-      bottom: '8px',
-      height: '60%',
-      borderRadius: '24px',
-      '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
-      '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
-    }"
+    height="60%"
+    :radius="24"
+    :footer-safe-space="96"
+    :z-index="2020"
+    swipe-handle=".immersive-sheet-header"
+    aria-label="编辑组别"
   >
-    <div
-      v-pull-to-dismiss="() => (showEditor = false)"
-      class="edit-set-popup"
-    >
-      <header class="edit-header">
-        <h3 class="edit-title">编辑组别</h3>
-      </header>
-      <div class="edit-wheels">
-        <NumberWheelPicker
-          v-model="editValue"
-          :count="detailFields.length"
-          :units="detailFields.map((field) => field.unit)"
-          :ranges="detailFields.map((field) => field.range)"
-        />
+    <template #header>
+      编辑组别
+    </template>
+
+    <template #default="{ headerSafeSpace, footerSafeSpace }">
+      <div
+        class="edit-set-popup"
+        :style="{
+          paddingTop: `${headerSafeSpace}px`,
+          paddingBottom: `${footerSafeSpace}px`,
+        }"
+      >
+        <div class="edit-wheels" data-sheet-swipe-ignore>
+          <NumberWheelPicker
+            v-model="editValue"
+            :count="detailFields.length"
+            :units="detailFields.map((field) => field.unit)"
+            :ranges="detailFields.map((field) => field.range)"
+          />
+        </div>
       </div>
-      <footer class="edit-footer">
+    </template>
+
+    <template #footer>
+      <div class="edit-footer">
         <button class="edit-cancel" @click="showEditor = false">取消</button>
         <button
           class="edit-save"
@@ -157,9 +168,9 @@ function saveEditor() {
         >
           保存
         </button>
-      </footer>
-    </div>
-  </ImmersivePopup>
+      </div>
+    </template>
+  </ImmersiveSheet>
 </template>
 
 <style scoped>
@@ -203,18 +214,6 @@ function saveEditor() {
   background: #fff;
   overflow: hidden;
 }
-.edit-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 20px;
-}
-.edit-title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  color: #1c1c1e;
-}
 .edit-wheels {
   flex: 1;
   display: flex;
@@ -225,8 +224,8 @@ function saveEditor() {
 }
 .edit-footer {
   display: flex;
+  width: 100%;
   gap: 12px;
-  padding: 16px;
 }
 .edit-cancel {
   flex: 1;
@@ -269,13 +268,6 @@ function saveEditor() {
 @media (prefers-color-scheme: dark) {
   .edit-set-popup {
     background: #2c2c2e;
-  }
-  .edit-title {
-    color: #fff;
-  }
-  .edit-header,
-  .edit-footer {
-    border-color: #3a3a3c;
   }
   .edit-cancel {
     background: #3a3a3c;

@@ -18,8 +18,9 @@ const emit = defineEmits<{
   "update:show": [value: boolean];
   close: [];
   saved: [];
+  closed: [];
   "nested-editor-open": [value: boolean];
-  "open-equipment-management": [];
+  "open-equipment-management": [equipmentId: string, exerciseId?: string];
 }>();
 
 const exerciseStore = useExerciseStore();
@@ -165,13 +166,14 @@ function closeDrawer() {
     :show="props.show"
     height="80%"
     :radius="24"
+    :recessed="nestedEditorOpen"
     swipe-handle="[data-sheet-swipe-handle]"
     aria-label="记录训练"
     @update:show="emit('update:show', $event)"
+    @closed="emit('closed')"
   >
     <div
       class="drawer-container"
-      :class="{ 'nested-drawer-open': nestedEditorOpen }"
     >
       <!-- 页面切换容器 -->
       <div
@@ -187,7 +189,11 @@ function closeDrawer() {
             <h2 class="equipment-title">{{ currentEquipment?.name }}</h2>
             <button
               class="header-icon-btn"
-              @click="emit('open-equipment-management')"
+              @click="emit(
+                'open-equipment-management',
+                props.equipmentId,
+                selectedExerciseId || undefined,
+              )"
             >
               <van-icon name="setting-o" size="20" />
             </button>
@@ -284,10 +290,6 @@ function closeDrawer() {
   border-radius: 24px;
   transform-origin: top center;
   transition: transform 0.28s ease;
-}
-
-.drawer-container.nested-drawer-open {
-  transform: translateY(8px) scale3d(0.965, 0.965, 1);
 }
 
 .pages-wrapper {

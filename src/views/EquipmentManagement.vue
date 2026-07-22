@@ -10,7 +10,12 @@ import { MUSCLE_GROUPS, type DataTemplate, type MuscleGroup, type Exercise } fro
 import { DATA_TEMPLATE_OPTIONS, getTemplateLabel } from '@/utils/dataTemplate'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 
-const props = defineProps<{ embedded?: boolean }>()
+const props = defineProps<{
+  embedded?: boolean
+  targetEquipmentId?: string
+  targetExerciseId?: string
+  targetRequestKey?: number
+}>()
 const emit = defineEmits<{
   close: []
   'flip-state-change': [flipping: boolean]
@@ -29,6 +34,7 @@ function onNavBack() {
 
 // ===== Search =====
 const searchQuery = ref('')
+const equipmentListRef = ref<HTMLElement | null>(null)
 
 const filteredEquipments = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -52,6 +58,13 @@ const filteredCases = computed(() => {
 
 // ===== Expand/collapse =====
 const expandedEquipmentId = ref<string | null>(null)
+let pendingReveal: {
+  equipmentId: string
+  exerciseId?: string
+  behavior: ScrollBehavior
+} | null = null
+let savedEquipmentRevealId: string | null = null
+let savedExerciseRevealId: string | null = null
 
 function toggleExpand(equipmentId: string) {
   expandedEquipmentId.value = expandedEquipmentId.value === equipmentId ? null : equipmentId
@@ -72,6 +85,13 @@ function expandEnter(element: Element) {
 function afterExpandEnter(element: Element) {
   const body = element as HTMLElement
   body.style.height = 'auto'
+  const equipmentId = body.closest<HTMLElement>('[data-equipment-id]')
+    ?.dataset.equipmentId
+  if (pendingReveal && equipmentId === pendingReveal.equipmentId) {
+    const target = pendingReveal
+    pendingReveal = null
+    scheduleRevealScroll(target.equipmentId, target.exerciseId, target.behavior)
+  }
 }
 
 function beforeExpandLeave(element: Element) {
@@ -97,6 +117,97 @@ function afterExpandLeave(element: Element) {
 function getEquipmentExercises(equipmentId: string) {
   return exerciseStore.exercises.filter(e => e.equipmentId === equipmentId)
 }
+
+function scrollTargetIntoView(
+  equipmentId: string,
+  exerciseId?: string,
+  behavior: ScrollBehavior = 'smooth',
+): void {
+  const list = equipmentListRef.value
+  if (!list) return
+  const equipmentElement = Array.from(
+    list.querySelectorAll<HTMLElement>('[data-equipment-id]'),
+  ).find(element => element.dataset.equipmentId === equipmentId)
+  const exerciseElement = exerciseId
+    ? Array.from(
+      list.querySelectorAll<HTMLElement>('[data-exercise-id]'),
+    ).find(element => element.dataset.exerciseId === exerciseId)
+    : undefined
+  const target = exerciseElement ?? equipmentElement
+  if (!target) return
+
+  const listRect = list.getBoundingClientRect()
+  const searchRect = list.querySelector<HTMLElement>('.search-container')
+    ?.getBoundingClientRect()
+  const obscuredTop = searchRect
+    ? Math.max(0, searchRect.bottom - listRect.top)
+    : 0
+  const targetRect = target.getBoundingClientRect()
+  const targetTop = targetRect.top - listRect.top + list.scrollTop
+  const visibleHeight = Math.max(0, list.clientHeight - obscuredTop)
+  const centeredOffset = Math.max(12, (visibleHeight - targetRect.height) / 2)
+  list.scrollTo({
+    top: Math.max(0, targetTop - obscuredTop - centeredOffset),
+    behavior,
+  })
+}
+
+function scheduleRevealScroll(
+  equipmentId: string,
+  exerciseId?: string,
+  behavior: ScrollBehavior = 'smooth',
+): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollTargetIntoView(equipmentId, exerciseId, behavior)
+    })
+  })
+}
+
+async function revealTarget(
+  requestedEquipmentId?: string,
+  requestedExerciseId?: string,
+  behavior: ScrollBehavior = 'smooth',
+): Promise<void> {
+  const exercise = requestedExerciseId
+    ? exerciseStore.exercises.find(item => item.id === requestedExerciseId)
+    : undefined
+  const equipmentId = exercise?.equipmentId ?? requestedEquipmentId
+  if (!equipmentId || !exerciseStore.equipments.some(item => item.id === equipmentId)) {
+    return
+  }
+
+  if (sortMode.value) await flipToSortMode(false)
+  searchQuery.value = ''
+  pendingReveal = {
+    equipmentId,
+    exerciseId: exercise?.id,
+    behavior,
+  }
+
+  if (expandedEquipmentId.value === equipmentId) {
+    await nextTick()
+    const target = pendingReveal
+    pendingReveal = null
+    scheduleRevealScroll(target.equipmentId, target.exerciseId, target.behavior)
+    return
+  }
+  expandedEquipmentId.value = equipmentId
+}
+
+watch(
+  () => [
+    props.targetEquipmentId,
+    props.targetExerciseId,
+    props.targetRequestKey,
+  ] as const,
+  ([equipmentId, exerciseId]) => {
+    if (equipmentId || exerciseId) {
+      void nextTick(() => revealTarget(equipmentId, exerciseId, 'auto'))
+    }
+  },
+  { immediate: true, flush: 'post' },
+)
 
 // Auto-expand when search narrows to exercises under one equipment
 watch([searchQuery, filteredEquipments], () => {
@@ -145,13 +256,20 @@ async function saveEquipment() {
     if (editingEquipmentId.value) {
       await exerciseStore.updateEquipment(editingEquipmentId.value, name)
     } else {
-      await exerciseStore.addEquipment(name)
+      savedEquipmentRevealId = await exerciseStore.addEquipment(name)
     }
     showEquipmentEditor.value = false
     showToast('已保存')
   } catch (error) {
     showToast(error instanceof Error ? error.message : '保存失败')
   }
+}
+
+function revealSavedEquipment(): void {
+  if (!savedEquipmentRevealId) return
+  const equipmentId = savedEquipmentRevealId
+  savedEquipmentRevealId = null
+  void revealTarget(equipmentId)
 }
 
 async function removeEquipment(id: string) {
@@ -213,13 +331,20 @@ async function saveExercise() {
     if (editingExerciseId.value) {
       await exerciseStore.updateExercise(editingExerciseId.value, input)
     } else {
-      await exerciseStore.addExercise(input)
+      savedExerciseRevealId = await exerciseStore.addExercise(input)
     }
     showExerciseEditor.value = false
     showToast('已保存')
   } catch (error) {
     showToast(error instanceof Error ? error.message : '保存失败')
   }
+}
+
+function revealSavedExercise(): void {
+  if (!savedExerciseRevealId) return
+  const exerciseId = savedExerciseRevealId
+  savedExerciseRevealId = null
+  void revealTarget(undefined, exerciseId)
 }
 
 async function removeExercise(id: string) {
@@ -254,11 +379,12 @@ function isCaseFullyComplete(equipmentCase: EquipmentCase): boolean {
 
 async function quickAddCase(equipmentCase: EquipmentCase) {
   if (isCaseFullyComplete(equipmentCase)) return
-  await exerciseStore.addCaseEquipment(
+  const equipmentId = await exerciseStore.addCaseEquipment(
     equipmentCase,
     equipmentCase.actions.map(a => a.id),
   )
   showToast(`已添加「${equipmentCase.name}」`)
+  await revealTarget(equipmentId)
 }
 
 function isEquipmentFromCase(equipmentId: string): boolean {
@@ -508,30 +634,8 @@ onUnmounted(() => {
       </button>
     </header>
 
-    <!-- Search bar -->
-    <div v-if="!sortMode" class="search-container">
-      <div v-smooth-corners="12" class="search-bar">
-        <van-icon name="search" size="16" color="#8e8e93" />
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="搜索器械或动作..."
-          enterkeyhint="search"
-        />
-        <van-icon
-          v-if="searchQuery"
-          name="clear"
-          size="16"
-          color="#c7c7cc"
-          class="search-clear"
-          @click="searchQuery = ''"
-        />
-      </div>
-    </div>
-
     <!-- Sort workspace -->
-    <div v-else class="sort-workspace">
+    <div v-if="sortMode" class="sort-workspace">
       <div v-smooth-corners="12" class="sort-segmented-control">
         <button
           class="sort-segment-button"
@@ -614,7 +718,29 @@ onUnmounted(() => {
     </div>
 
     <!-- Normal management content -->
-    <div v-if="!sortMode" class="equipment-list">
+    <div v-if="!sortMode" ref="equipmentListRef" class="equipment-list">
+      <!-- Search bar -->
+      <div class="search-container">
+        <div v-smooth-corners="12" class="search-bar">
+          <van-icon name="search" size="16" color="#8e8e93" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="search-input"
+            placeholder="搜索器械或动作..."
+            enterkeyhint="search"
+          />
+          <van-icon
+            v-if="searchQuery"
+            name="clear"
+            size="16"
+            color="#c7c7cc"
+            class="search-clear"
+            @click="searchQuery = ''"
+          />
+        </div>
+      </div>
+
       <!-- ====== 我的器械 ====== -->
       <div v-if="!searchQuery || filteredEquipments.length" class="section-label">我的器械</div>
 
@@ -691,6 +817,7 @@ onUnmounted(() => {
                     <div
                       v-smooth-corners="12"
                       class="exercise-item"
+                      :data-exercise-id="exercise.id"
                       @click="openEditExercise(exercise)"
                     >
                       <div class="exercise-info">
@@ -791,6 +918,7 @@ onUnmounted(() => {
       swipe-handle="[data-sheet-swipe-handle]"
       aria-label="编辑器械"
       @opened="focusEquipmentInput"
+      @closed="revealSavedEquipment"
     >
       <div
         class="equipment-editor-card"
@@ -830,6 +958,7 @@ onUnmounted(() => {
       swipe-handle=".immersive-sheet-header"
       aria-label="编辑动作"
       @opened="focusExerciseInput"
+      @closed="revealSavedExercise"
     >
       <template #header>
         <span>{{ editingExerciseId ? '编辑动作' : '新增动作' }}</span>
@@ -902,6 +1031,7 @@ onUnmounted(() => {
 }
 
 .management-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -972,13 +1102,20 @@ onUnmounted(() => {
 
 /* ===== Popup header ===== */
 .popup-header {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   height: 76px;
   padding: 0 20px;
-  position: relative;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .popup-title {
@@ -1063,8 +1200,24 @@ onUnmounted(() => {
 
 /* ===== Search bar ===== */
 .search-container {
-  flex-shrink: 0;
-  padding: 8px 16px 12px;
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  margin: 0 -16px;
+  padding: 8px 16px 18px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0.68) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+
+.management-page--embedded .search-container {
+  top: 0;
+  padding-top: 84px;
 }
 
 .search-bar {
@@ -1120,6 +1273,11 @@ onUnmounted(() => {
   padding: 0 16px;
 }
 
+.management-page--embedded .equipment-list {
+  padding-top: 0;
+  padding-bottom: 16px;
+}
+
 .sort-workspace {
   display: flex;
   flex: 1;
@@ -1127,6 +1285,10 @@ onUnmounted(() => {
   min-height: 0;
   padding: 4px 16px 16px;
   overflow: hidden;
+}
+
+.management-page--embedded .sort-workspace {
+  padding-top: 80px;
 }
 
 .sort-segmented-control {
@@ -1711,6 +1873,10 @@ onUnmounted(() => {
     color: #fff;
   }
 
+  .popup-header {
+    background: rgba(44, 44, 46, 0.72);
+  }
+
   .sort-toggle-btn,
   .sort-entry-btn {
     background: #3a3a3c;
@@ -1756,6 +1922,15 @@ onUnmounted(() => {
 
   .search-bar {
     background: #3a3a3c;
+  }
+
+  .search-container {
+    background: linear-gradient(
+      to bottom,
+      rgba(44, 44, 46, 0.74) 0%,
+      rgba(44, 44, 46, 0.7) 68%,
+      rgba(44, 44, 46, 0) 100%
+    );
   }
 
   .search-input {
