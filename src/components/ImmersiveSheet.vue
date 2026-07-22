@@ -334,6 +334,9 @@ onBeforeUnmount(() => {
 }
 
 .immersive-sheet-frame {
+  --sheet-frame-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.12),
+    0 2px 5px rgba(0, 0, 0, 0.08);
   position: absolute;
   right: var(--sheet-safe-margin);
   left: var(--sheet-safe-margin);
@@ -344,11 +347,20 @@ onBeforeUnmount(() => {
       var(--sheet-safe-margin) - var(--sheet-safe-margin)
   );
   margin-inline: auto;
-  filter:
-    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12))
-    drop-shadow(0 2px 5px rgba(0, 0, 0, 0.08));
+  isolation: isolate;
   pointer-events: auto;
   will-change: transform;
+}
+
+.immersive-sheet-frame::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: var(--sheet-radius);
+  box-shadow: var(--sheet-frame-shadow);
+  content: '';
+  pointer-events: none;
+  corner-shape: superellipse(1.2);
 }
 
 .immersive-sheet-frame--top {
@@ -364,18 +376,19 @@ onBeforeUnmount(() => {
 }
 
 .immersive-sheet-frame--prominent {
-  filter:
-    drop-shadow(0 18px 28px rgba(0, 0, 0, 0.2))
-    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  --sheet-frame-shadow:
+    0 18px 28px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
 .immersive-sheet-panel {
   position: relative;
+  z-index: 1;
   display: grid;
   width: 100%;
   height: auto;
   min-height: 0;
-  max-height: inherit;
+  max-height: 100%;
   overflow: hidden;
   border: 1px solid rgba(60, 60, 67, 0.1);
   border-radius: var(--sheet-radius);
@@ -392,8 +405,12 @@ onBeforeUnmount(() => {
 
 .immersive-sheet-content {
   min-height: 0;
-  max-height: inherit;
+  max-height: 100%;
   overflow: hidden;
+}
+
+.immersive-sheet-frame--sized .immersive-sheet-content {
+  height: 100%;
 }
 
 .immersive-sheet-frame:not(.immersive-sheet-frame--sized) .immersive-sheet-content {
@@ -409,6 +426,7 @@ onBeforeUnmount(() => {
 }
 
 .immersive-sheet-content :deep(.sheet-scroll-content) {
+  box-sizing: border-box;
   height: 100%;
   padding-top: var(--sheet-header-safe-space);
   padding-bottom: var(--sheet-footer-safe-space);
