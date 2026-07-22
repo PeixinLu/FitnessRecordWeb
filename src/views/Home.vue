@@ -2,7 +2,12 @@
 import { computed, ref, watch } from "vue";
 import { useExerciseStore } from "@/stores/exercise";
 import { useRecordStore } from "@/stores/record";
-import { showConfirmDialog, showToast } from "vant";
+import {
+  closeToast,
+  showConfirmDialog,
+  showLoadingToast,
+  showToast,
+} from "vant";
 import EquipmentDrawer from "@/components/EquipmentDrawer.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import PrimaryPageHeader from "@/components/PrimaryPageHeader.vue";
@@ -18,6 +23,7 @@ import {
   buildTodayWorkoutTimelineItems,
   type TodayWorkoutViewMode,
 } from "@/utils/todayWorkoutViews";
+import { shareWorkoutCard } from "@/utils/workoutShare";
 import WorkoutDetail from "@/views/WorkoutDetail.vue";
 import EquipmentManagement from "@/views/EquipmentManagement.vue";
 
@@ -36,6 +42,7 @@ function getInitialTodayWorkoutView(): TodayWorkoutViewMode {
 }
 
 const todayWorkoutView = ref<TodayWorkoutViewMode>(getInitialTodayWorkoutView());
+const isSharingWorkout = ref(false);
 
 watch(todayWorkoutView, (view) => {
   try {
@@ -168,6 +175,33 @@ function deleteWorkoutGroupByExerciseId(exerciseId: string) {
     (item) => item.exerciseId === exerciseId,
   );
   if (group) void deleteWorkoutGroup(group);
+}
+
+async function shareTodayWorkout() {
+  if (todayWorkoutExerciseItems.value.length === 0 || isSharingWorkout.value) {
+    return;
+  }
+
+  isSharingWorkout.value = true;
+  showLoadingToast({
+    message: "生成分享卡片...",
+    duration: 0,
+    forbidClick: true,
+  });
+  try {
+    const result = await shareWorkoutCard({
+      title: "今日训练",
+      date: recordStore.getTodayDate(),
+      items: todayWorkoutExerciseItems.value,
+    });
+    closeToast();
+    if (result === "downloaded") showToast("分享不可用，已下载图片");
+  } catch {
+    closeToast();
+    showToast("分享失败，请稍后重试");
+  } finally {
+    isSharingWorkout.value = false;
+  }
 }
 
 async function deleteWorkoutGroup(group: WorkoutGroup) {
@@ -314,25 +348,37 @@ function onRecordSaved() {
           <span class="records-title">今日训练</span>
           <span class="records-count">{{ todayWorkoutCount }}</span>
         </div>
-        <div class="records-view-switch" role="tablist" aria-label="训练记录视图">
+        <div class="records-header-actions">
           <button
+            v-if="todayRecords.length > 0"
+            class="records-share-button"
             type="button"
-            role="tab"
-            :aria-selected="todayWorkoutView === 'exercise'"
-            :class="{ active: todayWorkoutView === 'exercise' }"
-            @click="todayWorkoutView = 'exercise'"
+            aria-label="分享今日训练"
+            :disabled="isSharingWorkout"
+            @click="shareTodayWorkout"
           >
-            组合
+            <van-icon name="share-o" size="17" />
           </button>
-          <button
-            type="button"
-            role="tab"
-            :aria-selected="todayWorkoutView === 'timeline'"
-            :class="{ active: todayWorkoutView === 'timeline' }"
-            @click="todayWorkoutView = 'timeline'"
-          >
-            拆分
-          </button>
+          <div class="records-view-switch" role="tablist" aria-label="训练记录视图">
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="todayWorkoutView === 'exercise'"
+              :class="{ active: todayWorkoutView === 'exercise' }"
+              @click="todayWorkoutView = 'exercise'"
+            >
+              组合
+            </button>
+            <button
+              type="button"
+              role="tab"
+              :aria-selected="todayWorkoutView === 'timeline'"
+              :class="{ active: todayWorkoutView === 'timeline' }"
+              @click="todayWorkoutView = 'timeline'"
+            >
+              拆分
+            </button>
+          </div>
         </div>
       </div>
 
@@ -613,6 +659,30 @@ function onRecordSaved() {
   color: #8e8e93;
 }
 
+.records-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.records-share-button {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(30, 35, 45, 0.08);
+  color: #007aff;
+}
+
+.records-share-button:disabled {
+  opacity: 0.45;
+}
+
 .records-view-switch {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -767,6 +837,11 @@ function onRecordSaved() {
   .records-view-switch button.active {
     background: #48484a;
     color: #fff;
+  }
+
+  .records-share-button {
+    background: #3a3a3c;
+    color: #0a84ff;
   }
 
 }

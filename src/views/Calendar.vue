@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import {
+  closeToast,
   showConfirmDialog,
+  showLoadingToast,
   showToast,
   type SwipeInstance,
 } from 'vant'
@@ -21,6 +23,7 @@ import {
   groupRecordsByExercise,
   type WorkoutGroup,
 } from '@/utils/workoutGroups'
+import { shareWorkoutCard } from '@/utils/workoutShare'
 import WorkoutDetail from '@/views/WorkoutDetail.vue'
 
 type CalendarView = 'week' | 'month'
@@ -52,6 +55,7 @@ const calendarPageIndex = ref(calendarPageCenter)
 const calendarSwipeRef = ref<SwipeInstance>()
 const selectedDate = ref(todayDate)
 const workoutView = ref<TodayWorkoutViewMode>(getInitialWorkoutView())
+const isSharingWorkout = ref(false)
 const showWorkoutDetail = ref(false)
 const selectedWorkoutExerciseId = ref('')
 const isNestedEditorOpen = ref(false)
@@ -337,6 +341,31 @@ async function deleteWorkoutRecord(recordId: string): Promise<void> {
   }
 }
 
+async function shareSelectedWorkout(): Promise<void> {
+  if (selectedWorkoutItems.value.length === 0 || isSharingWorkout.value) return
+
+  isSharingWorkout.value = true
+  showLoadingToast({
+    message: '生成分享卡片...',
+    duration: 0,
+    forbidClick: true,
+  })
+  try {
+    const result = await shareWorkoutCard({
+      title: selectedDate.value === todayDate ? '今日训练' : '训练记录',
+      date: selectedDate.value,
+      items: selectedWorkoutItems.value,
+    })
+    closeToast()
+    if (result === 'downloaded') showToast('分享不可用，已下载图片')
+  } catch {
+    closeToast()
+    showToast('分享失败，请稍后重试')
+  } finally {
+    isSharingWorkout.value = false
+  }
+}
+
 </script>
 
 <template>
@@ -434,25 +463,37 @@ async function deleteWorkoutRecord(recordId: string): Promise<void> {
             <span>{{ selectedDate }}</span>
             <span>{{ selectedWorkoutCount }}</span>
           </div>
-          <div class="history-view-switch" role="tablist" aria-label="训练记录视图">
+          <div class="history-records-controls">
             <button
+              v-if="selectedDateRecords.length > 0"
+              class="history-share-button"
               type="button"
-              role="tab"
-              :aria-selected="workoutView === 'exercise'"
-              :class="{ active: workoutView === 'exercise' }"
-              @click="workoutView = 'exercise'"
+              aria-label="分享当日训练"
+              :disabled="isSharingWorkout"
+              @click="shareSelectedWorkout"
             >
-              组合
+              <van-icon name="share-o" size="17" />
             </button>
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="workoutView === 'timeline'"
-              :class="{ active: workoutView === 'timeline' }"
-              @click="workoutView = 'timeline'"
-            >
-              拆分
-            </button>
+            <div class="history-view-switch" role="tablist" aria-label="训练记录视图">
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="workoutView === 'exercise'"
+                :class="{ active: workoutView === 'exercise' }"
+                @click="workoutView = 'exercise'"
+              >
+                组合
+              </button>
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="workoutView === 'timeline'"
+                :class="{ active: workoutView === 'timeline' }"
+                @click="workoutView = 'timeline'"
+              >
+                拆分
+              </button>
+            </div>
           </div>
         </header>
 
@@ -753,6 +794,30 @@ async function deleteWorkoutRecord(recordId: string): Promise<void> {
   font-size: 12px;
 }
 
+.history-records-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-share-button {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(30, 35, 45, 0.08);
+  color: #007aff;
+}
+
+.history-share-button:disabled {
+  opacity: 0.45;
+}
+
 .history-view-switch {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -875,6 +940,11 @@ async function deleteWorkoutRecord(recordId: string): Promise<void> {
   .history-view-switch button.active {
     background: #48484a;
     color: #fff;
+  }
+
+  .history-share-button {
+    background: #3a3a3c;
+    color: #0a84ff;
   }
 }
 </style>
