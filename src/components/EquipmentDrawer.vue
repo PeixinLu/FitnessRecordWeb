@@ -5,7 +5,7 @@ import { useRecordStore } from "@/stores/record";
 import SetPicker from "@/components/SetPicker.vue";
 import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
 import ExerciseQuickEditor from "@/components/ExerciseQuickEditor.vue";
-import ImmersivePopup from "@/components/ImmersivePopup.vue";
+import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import { showToast } from "vant";
 import { getTemplateFields, type TemplateFieldKey } from "@/utils/dataTemplate";
 
@@ -175,26 +175,14 @@ function closeDrawer() {
 </script>
 
 <template>
-  <ImmersivePopup
+  <ImmersiveSheet
     :show="props.show"
-    :smooth-corners="24"
-    teleport="body"
-    position="bottom"
-    round
-    :style="{
-      width: 'calc(100% - 16px)',
-      left: '8px',
-      bottom: '8px',
-      height: '80%',
-      borderRadius: '24px',
-      background: 'transparent',
-      '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
-      '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
-    }"
+    height="80%"
+    :radius="24"
+    aria-label="记录训练"
     @update:show="emit('update:show', $event)"
   >
     <div
-      v-pull-to-dismiss="closeDrawer"
       class="drawer-container"
       :class="{ 'nested-drawer-open': nestedEditorOpen || showExerciseEditor }"
     >
@@ -291,7 +279,7 @@ function closeDrawer() {
         </div>
       </div>
     </div>
-  </ImmersivePopup>
+  </ImmersiveSheet>
 
   <ExerciseQuickEditor
     v-model:show="showExerciseEditor"

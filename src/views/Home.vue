@@ -6,7 +6,6 @@ import { useRecordStore } from "@/stores/record";
 import { showConfirmDialog, showToast } from "vant";
 import EquipmentDrawer from "@/components/EquipmentDrawer.vue";
 import CenterDebugDialog from "@/components/CenterDebugDialog.vue";
-import ImmersivePopup from "@/components/ImmersivePopup.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import PrimaryPageHeader from "@/components/PrimaryPageHeader.vue";
 import { getEquipmentIcon } from "@/utils/equipmentIcon";
@@ -272,22 +271,11 @@ function onRecordSaved() {
       @nested-editor-open="isNestedDrawerOpen = $event"
     />
 
-    <ImmersivePopup
+    <ImmersiveSheet
       v-model:show="showWorkoutDetail"
-      :smooth-corners="24"
-      teleport="body"
-      position="bottom"
-      round
-      :style="{
-        width: 'calc(100% - 16px)',
-        left: '8px',
-        bottom: '8px',
-        height: '80%',
-        borderRadius: '24px',
-        background: 'transparent',
-        '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
-        '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
-      }"
+      height="80%"
+      :radius="24"
+      aria-label="训练记录详情"
     >
       <WorkoutDetail
         embedded
@@ -296,7 +284,7 @@ function onRecordSaved() {
         @close="showWorkoutDetail = false"
         @nested-editor-open="isNestedDrawerOpen = $event"
       />
-    </ImmersivePopup>
+    </ImmersiveSheet>
 
     <!-- 器械管理弹窗 -->
     <ImmersiveSheet
