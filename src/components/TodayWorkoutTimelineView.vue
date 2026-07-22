@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { TodayWorkoutTimelineItem } from '@/utils/todayWorkoutViews'
+import {
+  formatWorkoutItemTitle,
+  type TodayWorkoutTimelineItem,
+} from '@/utils/todayWorkoutViews'
 
 defineProps<{
   items: TodayWorkoutTimelineItem[]
@@ -38,7 +41,7 @@ const emit = defineEmits<{
           </div>
           <div class="timeline-record-main">
             <div class="timeline-record-title">
-              <strong>{{ item.exerciseName }}</strong>
+              <strong>{{ formatWorkoutItemTitle(item.exerciseName, item.equipmentName) }}</strong>
               <span v-if="item.muscleGroup">{{ item.muscleGroup }}</span>
             </div>
             <div class="timeline-record-detail">{{ item.detail }}</div>

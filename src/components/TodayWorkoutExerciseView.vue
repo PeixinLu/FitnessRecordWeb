@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { TodayWorkoutExerciseItem } from '@/utils/todayWorkoutViews'
+import {
+  formatWorkoutItemTitle,
+  type TodayWorkoutExerciseItem,
+} from '@/utils/todayWorkoutViews'
 
 defineProps<{
   items: TodayWorkoutExerciseItem[]
@@ -28,7 +31,7 @@ const emit = defineEmits<{
             />
             <span v-else>🏋️</span>
           </div>
-          <strong>{{ item.exerciseName }}</strong>
+          <strong>{{ formatWorkoutItemTitle(item.exerciseName, item.equipmentName) }}</strong>
           <span v-if="item.muscleGroup" class="muscle-label">
             {{ item.muscleGroup }}
           </span>

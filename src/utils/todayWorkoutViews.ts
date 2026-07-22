@@ -11,6 +11,7 @@ export interface TodayWorkoutSetItem {
 
 export interface TodayWorkoutExerciseItem {
   exerciseId: string
+  equipmentName?: string
   exerciseName: string
   muscleGroup?: MuscleGroup
   equipmentIcon?: string
@@ -19,6 +20,7 @@ export interface TodayWorkoutExerciseItem {
 
 export interface TodayWorkoutTimelineItem extends TodayWorkoutSetItem {
   exerciseId: string
+  equipmentName?: string
   exerciseName: string
   muscleGroup?: MuscleGroup
   equipmentIcon?: string
@@ -35,9 +37,17 @@ function getExerciseMeta(
   )
 
   return {
+    equipmentName: equipment?.name,
     muscleGroup: exercise?.muscleGroup,
     equipmentIcon: getEquipmentIcon(equipment?.icon),
   }
+}
+
+export function formatWorkoutItemTitle(
+  exerciseName: string,
+  equipmentName?: string,
+): string {
+  return equipmentName ? `${equipmentName} · ${exerciseName}` : exerciseName
 }
 
 export function formatWorkoutSet(record: WorkoutRecord): string {
