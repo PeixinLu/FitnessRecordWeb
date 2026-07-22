@@ -12,11 +12,13 @@
 
 html.immersive-popup-open body,
 html.immersive-popup-open #app,
-html.immersive-popup-open .home-page {
+html.immersive-popup-open .home-page,
+html.immersive-popup-open .history-page {
   background: transparent;
 }
 
 html.immersive-popup-open .primary-page-menu-capsule,
+html.immersive-popup-open .primary-page-back-button,
 html.immersive-popup-open .equipment-card,
 html.immersive-popup-open .record-item,
 html.immersive-popup-open .record-icon,
@@ -24,7 +26,11 @@ html.immersive-popup-open .exercise-record-card,
 html.immersive-popup-open .exercise-record-icon,
 html.immersive-popup-open .timeline-record-card,
 html.immersive-popup-open .timeline-record-icon,
-html.immersive-popup-open .records-view-switch button.active {
+html.immersive-popup-open .records-view-switch button.active,
+html.immersive-popup-open .history-view-switch button.active,
+html.immersive-popup-open .calendar-card,
+html.immersive-popup-open .today-button,
+html.immersive-popup-open .calendar-view-switch button.active {
   background: rgba(255, 255, 255, var(--app-surface-alpha));
 }
 

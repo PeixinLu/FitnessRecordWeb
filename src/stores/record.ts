@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db } from '@/db/database'
 import type { WorkoutRecord } from '@/types'
+import { formatLocalDate } from '@/utils/date'
 
 export const useRecordStore = defineStore('record', () => {
   const records = ref<WorkoutRecord[]>([])
@@ -15,7 +16,7 @@ export const useRecordStore = defineStore('record', () => {
 
   // 格式化日期
   function formatDate(date: Date): string {
-    return date.toISOString().split('T')[0]
+    return formatLocalDate(date)
   }
 
   // 今日记录

@@ -322,7 +322,7 @@ function onRecordSaved() {
             :class="{ active: todayWorkoutView === 'exercise' }"
             @click="todayWorkoutView = 'exercise'"
           >
-            动作
+            组合
           </button>
           <button
             type="button"
@@ -331,7 +331,7 @@ function onRecordSaved() {
             :class="{ active: todayWorkoutView === 'timeline' }"
             @click="todayWorkoutView = 'timeline'"
           >
-            时间
+            拆分
           </button>
         </div>
       </div>

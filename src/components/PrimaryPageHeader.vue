@@ -17,11 +17,12 @@ const router = useRouter()
 const showMenu = ref(false)
 const menuButtonRef = ref<HTMLButtonElement | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
+const showBackButton = computed(() => route.path !== '/')
 
 const actions = computed<PageAction[]>(() =>
   [
     { name: '记录', path: '/' },
-    { name: '日历', path: '/calendar' },
+    { name: '训练历史', path: '/calendar' },
     { name: '统计', path: '/statistics' },
     { name: '设置', path: '/settings' },
   ].map(action => ({
@@ -33,6 +34,11 @@ const actions = computed<PageAction[]>(() =>
 function navigateToPage(action: PageAction): void {
   showMenu.value = false
   if (action.path !== route.path) router.push(action.path)
+}
+
+function returnToRecords(): void {
+  showMenu.value = false
+  router.push('/')
 }
 
 function handleDocumentPointerDown(event: PointerEvent): void {
@@ -63,7 +69,19 @@ onBeforeUnmount(() => {
 
 <template>
   <header class="primary-page-header">
-    <PrimaryPageTitle :title="title" />
+    <div class="primary-page-heading">
+      <button
+        v-if="showBackButton"
+        v-smooth-corners="19"
+        class="primary-page-back-button"
+        type="button"
+        aria-label="返回记录页"
+        @click="returnToRecords"
+      >
+        <van-icon name="arrow-left" size="20" />
+      </button>
+      <PrimaryPageTitle :title="title" />
+    </div>
 
     <div v-smooth-corners="16" class="primary-page-menu-capsule">
       <template v-if="slots.action">
@@ -112,22 +130,60 @@ onBeforeUnmount(() => {
 <style scoped>
 .primary-page-header {
   z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   position: relative;
+  min-height: calc(58px + env(safe-area-inset-top));
 }
 
 .primary-page-header :deep(.primary-page-title) {
-  flex: 1;
-  padding-right: 0;
+  width: 100%;
+  padding: 14px 88px 8px;
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: -0.35px;
+  text-align: center;
+}
+
+.primary-page-heading {
+  position: relative;
+  width: 100%;
+  padding-top: env(safe-area-inset-top);
+}
+
+.primary-page-back-button {
+  position: absolute;
+  top: calc(11px + env(safe-area-inset-top));
+  left: 20px;
+  z-index: 2;
+  display: flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 8px rgba(30, 35, 45, 0.08);
+  color: #1c1c1e;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.primary-page-back-button:active {
+  transform: scale(0.94);
+  background: rgba(229, 229, 234, 0.9);
 }
 
 .primary-page-menu-capsule {
+  position: absolute;
+  top: calc(11px + env(safe-area-inset-top));
+  right: 16px;
+  z-index: 2;
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  margin-right: 16px;
   overflow: hidden;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.76);
@@ -246,6 +302,11 @@ onBeforeUnmount(() => {
 @media (prefers-color-scheme: dark) {
   .primary-page-menu-capsule {
     background: rgba(58, 58, 60, 0.76);
+  }
+
+  .primary-page-back-button {
+    background: rgba(58, 58, 60, 0.82);
+    color: #fff;
   }
 
   .primary-page-menu-divider {
