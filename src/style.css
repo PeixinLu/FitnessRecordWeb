@@ -19,7 +19,12 @@ html.immersive-popup-open .home-page {
 html.immersive-popup-open .primary-page-menu-capsule,
 html.immersive-popup-open .equipment-card,
 html.immersive-popup-open .record-item,
-html.immersive-popup-open .record-icon {
+html.immersive-popup-open .record-icon,
+html.immersive-popup-open .exercise-record-card,
+html.immersive-popup-open .exercise-record-icon,
+html.immersive-popup-open .timeline-record-card,
+html.immersive-popup-open .timeline-record-icon,
+html.immersive-popup-open .records-view-switch button.active {
   background: rgba(255, 255, 255, var(--app-surface-alpha));
 }
 

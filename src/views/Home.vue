@@ -1,29 +1,55 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useExerciseStore } from "@/stores/exercise";
 import { useRecordStore } from "@/stores/record";
 import { showConfirmDialog, showToast } from "vant";
 import EquipmentDrawer from "@/components/EquipmentDrawer.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import PrimaryPageHeader from "@/components/PrimaryPageHeader.vue";
+import TodayWorkoutExerciseView from "@/components/TodayWorkoutExerciseView.vue";
+import TodayWorkoutTimelineView from "@/components/TodayWorkoutTimelineView.vue";
 import { getEquipmentIcon } from "@/utils/equipmentIcon";
 import {
   groupRecordsByExercise,
-  summarizeWorkoutSets,
   type WorkoutGroup,
 } from "@/utils/workoutGroups";
+import {
+  buildTodayWorkoutExerciseItems,
+  buildTodayWorkoutTimelineItems,
+  type TodayWorkoutViewMode,
+} from "@/utils/todayWorkoutViews";
 import WorkoutDetail from "@/views/WorkoutDetail.vue";
 import EquipmentManagement from "@/views/EquipmentManagement.vue";
 
 const exerciseStore = useExerciseStore();
 const recordStore = useRecordStore();
+const todayWorkoutViewStorageKey = "fitness-record-today-workout-view";
+
+function getInitialTodayWorkoutView(): TodayWorkoutViewMode {
+  try {
+    return localStorage.getItem(todayWorkoutViewStorageKey) === "timeline"
+      ? "timeline"
+      : "exercise";
+  } catch {
+    return "exercise";
+  }
+}
+
+const todayWorkoutView = ref<TodayWorkoutViewMode>(getInitialTodayWorkoutView());
+
+watch(todayWorkoutView, (view) => {
+  try {
+    localStorage.setItem(todayWorkoutViewStorageKey, view);
+  } catch {
+    // Safari 隐私模式下存储可能不可用，不影响本次切换。
+  }
+});
 
 // 抽屉状态
 const showDrawer = ref(false);
 const selectedEquipmentId = ref<string>("");
 const showWorkoutDetail = ref(false);
 const selectedWorkoutExerciseId = ref("");
-const isEquipmentCollapsed = ref(false);
 const isNestedDrawerOpen = ref(false);
 const isSecondaryPageOpen = computed(
   () => showDrawer.value || showWorkoutDetail.value || showEquipmentManager.value,
@@ -43,6 +69,9 @@ const pendingEquipmentManagementTarget = ref<{
 // ===== 器械九宫格 =====
 const equipmentPage = ref(0);
 const equipmentPageSize = 6; // 每页6个（2行×3列）
+const isSingleEquipmentRow = computed(
+  () => exerciseStore.equipments.length > 0 && exerciseStore.equipments.length <= 3,
+);
 const equipmentPages = computed(() => {
   const pages: Array<typeof exerciseStore.equipments> = [];
   const all = exerciseStore.equipments;
@@ -68,10 +97,6 @@ function onEquipmentPageChange(page: number) {
   equipmentPage.value = page;
 }
 
-function onRecordsScroll(event: Event) {
-  isEquipmentCollapsed.value = (event.target as HTMLElement).scrollTop > 8;
-}
-
 // ===== 今日记录 =====
 const todayRecords = computed(() => {
   const today = recordStore.getTodayDate();
@@ -82,6 +107,28 @@ const todayRecords = computed(() => {
 
 const todayWorkoutGroups = computed(() =>
   groupRecordsByExercise(todayRecords.value),
+);
+
+const todayWorkoutExerciseItems = computed(() =>
+  buildTodayWorkoutExerciseItems(
+    todayRecords.value,
+    exerciseStore.exercises,
+    exerciseStore.equipments,
+  ),
+);
+
+const todayWorkoutTimelineItems = computed(() =>
+  buildTodayWorkoutTimelineItems(
+    todayRecords.value,
+    exerciseStore.exercises,
+    exerciseStore.equipments,
+  ),
+);
+
+const todayWorkoutCount = computed(() =>
+  todayWorkoutView.value === "timeline"
+    ? `${todayRecords.value.length}组`
+    : `${todayWorkoutGroups.value.length}个动作`,
 );
 
 const selectedWorkoutGroup = computed(() =>
@@ -95,19 +142,32 @@ const selectedWorkoutTitle = computed(() => {
   return group ? `${group.exerciseName} · ${group.records.length}组` : "训练详情";
 });
 
-function getGroupEquipmentIcon(group: WorkoutGroup): string | undefined {
-  const exercise = exerciseStore.exercises.find(
-    (item) => item.id === group.exerciseId,
-  );
-  const equipment = exerciseStore.equipments.find(
-    (item) => item.id === exercise?.equipmentId,
-  );
-  return getEquipmentIcon(equipment?.icon);
-}
-
 function openWorkoutDetail(exerciseId: string) {
   selectedWorkoutExerciseId.value = exerciseId;
   showWorkoutDetail.value = true;
+}
+
+async function deleteWorkoutRecord(recordId: string) {
+  const record = todayRecords.value.find((item) => item.id === recordId);
+  if (!record) return;
+
+  try {
+    await showConfirmDialog({
+      title: "删除组别",
+      message: `确定删除「${record.exerciseName}」的这组记录吗？`,
+    });
+    await recordStore.deleteRecord(record.id);
+    showToast("已删除");
+  } catch {
+    // 用户取消
+  }
+}
+
+function deleteWorkoutGroupByExerciseId(exerciseId: string) {
+  const group = todayWorkoutGroups.value.find(
+    (item) => item.exerciseId === exerciseId,
+  );
+  if (group) void deleteWorkoutGroup(group);
 }
 
 async function deleteWorkoutGroup(group: WorkoutGroup) {
@@ -188,7 +248,7 @@ function onRecordSaved() {
     <!-- 器械九宫格（固定） -->
     <section
       class="equipment-section"
-      :class="{ collapsed: isEquipmentCollapsed }"
+      :class="{ 'single-row': isSingleEquipmentRow }"
     >
       <van-empty
         v-if="equipmentPages.length === 0"
@@ -248,48 +308,51 @@ function onRecordSaved() {
     </section>
 
     <!-- 今日记录（可滚动） -->
-    <section class="records-section" @scroll="onRecordsScroll">
+    <section class="records-section">
       <div class="records-header">
-        <span class="records-title">今日训练</span>
-        <span class="records-count">{{ todayWorkoutGroups.length }}个动作</span>
+        <div class="records-heading">
+          <span class="records-title">今日训练</span>
+          <span class="records-count">{{ todayWorkoutCount }}</span>
+        </div>
+        <div class="records-view-switch" role="tablist" aria-label="训练记录视图">
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="todayWorkoutView === 'exercise'"
+            :class="{ active: todayWorkoutView === 'exercise' }"
+            @click="todayWorkoutView = 'exercise'"
+          >
+            动作
+          </button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="todayWorkoutView === 'timeline'"
+            :class="{ active: todayWorkoutView === 'timeline' }"
+            @click="todayWorkoutView = 'timeline'"
+          >
+            时间
+          </button>
+        </div>
       </div>
 
       <div class="records-list">
         <van-empty
-          v-if="todayWorkoutGroups.length === 0"
+          v-if="todayRecords.length === 0"
           description="还没有训练记录，点击上方器械开始"
         />
-
-        <van-swipe-cell
-          v-for="group in todayWorkoutGroups"
-          :key="group.exerciseId"
-        >
-          <div v-smooth-corners="12" class="record-item" @click="openWorkoutDetail(group.exerciseId)">
-            <div v-if="getGroupEquipmentIcon(group)" v-smooth-corners="10" class="record-icon">
-              <img
-                :src="getGroupEquipmentIcon(group)"
-                :alt="`${group.exerciseName}器械图标`"
-              />
-            </div>
-            <div v-else v-smooth-corners="10" class="record-icon">🏋️</div>
-            <div class="record-info">
-              <div class="record-name">{{ group.exerciseName }}</div>
-              <div class="record-detail">
-                {{ summarizeWorkoutSets(group.records) }}
-              </div>
-            </div>
-            <van-icon name="arrow" color="#8e8e93" />
-          </div>
-          <template #right>
-            <van-button
-              v-smooth-corners="12"
-              class="delete-group-button"
-              type="danger"
-              text="删除"
-              @click="deleteWorkoutGroup(group)"
-            />
-          </template>
-        </van-swipe-cell>
+        <TodayWorkoutExerciseView
+          v-else-if="todayWorkoutView === 'exercise'"
+          :items="todayWorkoutExerciseItems"
+          @open="openWorkoutDetail"
+          @delete="deleteWorkoutGroupByExerciseId"
+        />
+        <TodayWorkoutTimelineView
+          v-else
+          :items="todayWorkoutTimelineItems"
+          @open="openWorkoutDetail"
+          @delete="deleteWorkoutRecord"
+        />
       </div>
     </section>
 
@@ -494,38 +557,12 @@ function onRecordSaved() {
   margin-top: 6px;
 }
 
-.equipment-section.collapsed {
-  padding-top: 4px;
-  padding-bottom: 4px;
+.equipment-section.single-row .equipment-swipe {
+  height: 80px;
 }
 
-.equipment-section.collapsed .equipment-swipe {
-  height: 54px;
-}
-
-.equipment-section.collapsed .equipment-grid {
+.equipment-section.single-row .equipment-grid {
   grid-template-rows: 1fr;
-}
-
-.equipment-section.collapsed .equipment-card:nth-child(n + 4),
-.equipment-section.collapsed .page-indicator {
-  display: none;
-}
-
-.equipment-section.collapsed .equipment-card {
-  flex-direction: row;
-  gap: 6px;
-  padding: 6px;
-}
-
-.equipment-section.collapsed .equipment-icon,
-.equipment-section.collapsed .equipment-icon img {
-  width: 26px;
-  height: 26px;
-}
-
-.equipment-section.collapsed .equipment-name {
-  font-size: 12px;
 }
 
 .dot {
@@ -544,13 +581,12 @@ function onRecordSaved() {
 .records-section {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-  padding: 16px;
-  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  padding: 16px 16px 0;
 }
 
 .records-header {
@@ -560,6 +596,12 @@ function onRecordSaved() {
   margin-bottom: 12px;
 }
 
+.records-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .records-title {
   font-size: 16px;
   font-weight: 600;
@@ -567,14 +609,52 @@ function onRecordSaved() {
 }
 
 .records-count {
-  font-size: 14px;
+  font-size: 12px;
   color: #8e8e93;
+}
+
+.records-view-switch {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: rgba(118, 118, 128, 0.12);
+}
+
+.records-view-switch button {
+  min-width: 48px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #636366;
+  font: inherit;
+  font-size: 12px;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.records-view-switch button.active {
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 1px 3px rgba(30, 35, 45, 0.12);
+  color: #1c1c1e;
+  font-weight: 600;
 }
 
 .records-list {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .workout-detail-quiet-action {
@@ -618,63 +698,6 @@ function onRecordSaved() {
   margin-left: 4px;
 }
 
-.record-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #fff;
-  border-radius: 12px;
-}
-
-.delete-group-button {
-  height: 100%;
-  min-height: 100%;
-  margin-left: 8px;
-  padding: 0 22px;
-  border-radius: 12px;
-}
-
-.record-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f5f7;
-  border-radius: 10px;
-  font-size: 20px;
-}
-
-.record-icon img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  filter: invert(46%) sepia(92%) saturate(2835%) hue-rotate(194deg)
-    brightness(102%) contrast(101%);
-}
-
-.record-info {
-  flex: 1;
-}
-
-.record-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: #1c1c1e;
-}
-
-.record-detail {
-  font-size: 13px;
-  color: #8e8e93;
-  margin-top: 2px;
-}
-
-.record-time {
-  font-size: 12px;
-  color: #8e8e93;
-}
-
 @media (max-height: 667px) {
   .equipment-section {
     padding-top: 4px;
@@ -686,13 +709,16 @@ function onRecordSaved() {
     height: 156px;
   }
 
+  .equipment-section.single-row .equipment-swipe {
+    height: 76px;
+  }
+
   .page-indicator {
     margin-top: 4px;
   }
 
   .records-section {
     padding-top: 10px;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 
   .records-header {
@@ -734,19 +760,12 @@ function onRecordSaved() {
     color: #fff;
   }
 
-  .record-item {
-    background: #2c2c2e;
-  }
-
-  .record-icon {
-    background: #3a3a3c;
-  }
-
-  .record-name {
+  .records-title {
     color: #fff;
   }
 
-  .records-title {
+  .records-view-switch button.active {
+    background: #48484a;
     color: #fff;
   }
 
