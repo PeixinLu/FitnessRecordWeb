@@ -122,17 +122,17 @@ function openCreateEquipment() {
   editingEquipmentId.value = undefined
   equipmentName.value = ''
   showEquipmentEditor.value = true
-  nextTick(() => equipmentInputRef.value?.focus())
 }
 
 function openEditEquipment(id: string, name: string) {
   editingEquipmentId.value = id
   equipmentName.value = name
   showEquipmentEditor.value = true
-  nextTick(() => {
-    equipmentInputRef.value?.focus()
-    equipmentInputRef.value?.select()
-  })
+}
+
+function focusEquipmentInput(): void {
+  equipmentInputRef.value?.focus({ preventScroll: true })
+  if (editingEquipmentId.value) equipmentInputRef.value?.select()
 }
 
 async function saveEquipment() {
@@ -181,7 +181,6 @@ function openCreateExercise(equipmentId: string) {
   exerciseMuscleGroup.value = '胸'
   exerciseDataTemplate.value = 'weight-reps'
   showExerciseEditor.value = true
-  nextTick(() => exerciseInputRef.value?.focus())
 }
 
 function openEditExercise(exercise: Exercise) {
@@ -191,10 +190,11 @@ function openEditExercise(exercise: Exercise) {
   exerciseMuscleGroup.value = exercise.muscleGroup
   exerciseDataTemplate.value = exercise.dataTemplate
   showExerciseEditor.value = true
-  nextTick(() => {
-    exerciseInputRef.value?.focus()
-    exerciseInputRef.value?.select()
-  })
+}
+
+function focusExerciseInput(): void {
+  exerciseInputRef.value?.focus({ preventScroll: true })
+  if (editingExerciseId.value) exerciseInputRef.value?.select()
 }
 
 async function saveExercise() {
@@ -786,8 +786,11 @@ onUnmounted(() => {
       v-model:show="showEquipmentEditor"
       position="top"
       :radius="24"
+      elevation="prominent"
+      :z-index="2010"
       swipe-handle="[data-sheet-swipe-handle]"
       aria-label="编辑器械"
+      @opened="focusEquipmentInput"
     >
       <div
         class="equipment-editor-card"
@@ -806,6 +809,7 @@ onUnmounted(() => {
         </div>
         <input
           ref="equipmentInputRef"
+          autofocus
           v-model="equipmentName"
           type="text"
           class="editor-input"
@@ -821,26 +825,36 @@ onUnmounted(() => {
       v-model:show="showExerciseEditor"
       position="top"
       :radius="24"
-      swipe-handle="[data-sheet-swipe-handle]"
+      elevation="prominent"
+      :z-index="2010"
+      swipe-handle=".immersive-sheet-header"
       aria-label="编辑动作"
+      @opened="focusExerciseInput"
     >
-      <div
-        class="exercise-editor-card"
-      >
-        <div class="editor-card-header" data-sheet-swipe-handle>
-          <span class="editor-card-title">{{ editingExerciseId ? '编辑动作' : '新增动作' }}</span>
-          <button
-            v-smooth-corners="18"
-            class="editor-confirm-btn"
-            :class="{ 'editor-confirm-btn--active': exerciseName.trim().length > 0 }"
-            @click="saveExercise"
-            aria-label="确认"
-          >
-            <van-icon name="success" size="18" color="#fff" />
-          </button>
-        </div>
+      <template #header>
+        <span>{{ editingExerciseId ? '编辑动作' : '新增动作' }}</span>
+      </template>
+
+      <template #header-right>
+        <button
+          v-smooth-corners="18"
+          class="editor-confirm-btn"
+          :class="{ 'editor-confirm-btn--active': exerciseName.trim().length > 0 }"
+          @click="saveExercise"
+          aria-label="确认"
+        >
+          <van-icon name="success" size="18" color="#fff" />
+        </button>
+      </template>
+
+      <template #default="{ headerSafeSpace }">
+        <div
+          class="exercise-editor-card"
+          :style="{ paddingTop: `${headerSafeSpace}px` }"
+        >
         <input
           ref="exerciseInputRef"
+          autofocus
           v-model="exerciseName"
           type="text"
           class="editor-input"
@@ -872,7 +886,8 @@ onUnmounted(() => {
             @click="exerciseDataTemplate = option.value"
           >{{ option.label }}</button>
         </div>
-      </div>
+        </div>
+      </template>
     </ImmersiveSheet>
     </div>
   </div>
@@ -1552,7 +1567,7 @@ onUnmounted(() => {
 /* ===== Equipment editor card popup ===== */
 .equipment-editor-card {
   background: transparent;
-  padding: 18px 20px 20px;
+  padding: 18px 20px 24px;
 }
 
 .editor-card-header {
@@ -1593,25 +1608,32 @@ onUnmounted(() => {
 }
 
 .editor-input {
+  box-sizing: border-box;
   width: 100%;
+  min-height: 48px;
   border: none;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
   font-size: 24px;
   font-weight: 500;
   font-family: inherit;
+  line-height: 1.3;
   color: #1c1c1e;
   background: transparent;
-  padding: 4px 0;
+  padding: 6px 2px 8px;
 }
 
 .editor-input::placeholder {
   color: #c7c7cc;
+  line-height: inherit;
+  opacity: 1;
 }
 
 /* ===== Exercise editor card ===== */
 .exercise-editor-card {
   background: transparent;
-  padding: 18px 20px 20px;
+  padding: 18px 20px 24px;
 }
 
 /* ===== Pill toggle buttons ===== */
@@ -1647,6 +1669,32 @@ onUnmounted(() => {
 
 .pill-btn:active {
   transform: scale(0.95);
+}
+
+@media (max-height: 600px) {
+  .exercise-editor-card {
+    padding-top: 12px;
+    padding-bottom: 14px;
+  }
+
+  .exercise-editor-card .editor-card-header {
+    margin-bottom: 8px;
+  }
+
+  .exercise-editor-card .editor-input {
+    min-height: 40px;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  .exercise-editor-card .pill-group {
+    margin-top: 10px;
+  }
+
+  .exercise-editor-card .pill-btn {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
 }
 
 /* ===== Dark mode ===== */

@@ -16,6 +16,7 @@ import {
 defineOptions({ inheritAttrs: false })
 
 type SheetPosition = 'top' | 'bottom'
+type SheetElevation = 'standard' | 'prominent'
 
 const props = withDefaults(
   defineProps<{
@@ -31,6 +32,7 @@ const props = withDefaults(
     footerSafeSpace?: number
     ariaLabel?: string
     zIndex?: number
+    elevation?: SheetElevation
   }>(),
   {
     position: 'bottom',
@@ -42,6 +44,7 @@ const props = withDefaults(
     footerSafeSpace: 88,
     ariaLabel: '弹窗',
     zIndex: 2000,
+    elevation: 'standard',
   },
 )
 
@@ -223,7 +226,9 @@ watch(
       : null
     enterEnvironment()
     await nextTick()
-    panelRef.value?.focus({ preventScroll: true })
+    const autofocusTarget = panelRef.value?.querySelector<HTMLElement>('[autofocus]')
+    const focusTarget = autofocusTarget ?? panelRef.value
+    focusTarget?.focus({ preventScroll: true })
   },
   { immediate: true },
 )
@@ -252,53 +257,61 @@ onBeforeUnmount(() => {
         @after-enter="onAfterEnter"
         @after-leave="onAfterLeave"
       >
-        <section
+        <div
           v-if="props.show"
-          ref="panelRef"
-          v-bind="attrs"
-          v-smooth-corners="props.radius"
-          class="immersive-sheet-panel"
+          class="immersive-sheet-frame"
           :class="[
-            `immersive-sheet-panel--${props.position}`,
-            { 'immersive-sheet-panel--dragging': dragging },
+            `immersive-sheet-frame--${props.position}`,
+            `immersive-sheet-frame--${props.elevation}`,
+            {
+              'immersive-sheet-frame--dragging': dragging,
+              'immersive-sheet-frame--sized': normalizedHeight !== undefined,
+            },
           ]"
           :style="panelStyle"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="props.ariaLabel"
-          tabindex="-1"
-          @touchstart="onTouchStart"
-          @touchmove="onTouchMove"
-          @touchend="finishTouch"
-          @touchcancel="finishTouch"
         >
-          <div class="immersive-sheet-content">
-            <slot
-              :header-safe-space="hasHeader ? props.headerSafeSpace : 0"
-              :footer-safe-space="hasFooter ? props.footerSafeSpace : 0"
-            />
-          </div>
+          <section
+            ref="panelRef"
+            v-bind="attrs"
+            v-smooth-corners="props.radius"
+            class="immersive-sheet-panel"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="props.ariaLabel"
+            tabindex="-1"
+            @touchstart="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="finishTouch"
+            @touchcancel="finishTouch"
+          >
+            <div class="immersive-sheet-content">
+              <slot
+                :header-safe-space="hasHeader ? props.headerSafeSpace : 0"
+                :footer-safe-space="hasFooter ? props.footerSafeSpace : 0"
+              />
+            </div>
 
-          <header v-if="hasHeader" class="immersive-sheet-header">
-            <div class="immersive-sheet-frost" />
-            <div class="immersive-sheet-header-left">
-              <slot name="header-left" />
-            </div>
-            <div class="immersive-sheet-header-title">
-              <slot name="header" />
-            </div>
-            <div class="immersive-sheet-header-right">
-              <slot name="header-right" />
-            </div>
-          </header>
+            <header v-if="hasHeader" class="immersive-sheet-header">
+              <div class="immersive-sheet-frost" />
+              <div class="immersive-sheet-header-left">
+                <slot name="header-left" />
+              </div>
+              <div class="immersive-sheet-header-title">
+                <slot name="header" />
+              </div>
+              <div class="immersive-sheet-header-right">
+                <slot name="header-right" />
+              </div>
+            </header>
 
-          <footer v-if="hasFooter" class="immersive-sheet-footer">
-            <div class="immersive-sheet-frost" />
-            <div class="immersive-sheet-footer-content">
-              <slot name="footer" />
-            </div>
-          </footer>
-        </section>
+            <footer v-if="hasFooter" class="immersive-sheet-footer">
+              <div class="immersive-sheet-frost" />
+              <div class="immersive-sheet-footer-content">
+                <slot name="footer" />
+              </div>
+            </footer>
+          </section>
+        </div>
       </Transition>
     </div>
   </Teleport>
@@ -320,7 +333,7 @@ onBeforeUnmount(() => {
   pointer-events: auto;
 }
 
-.immersive-sheet-panel {
+.immersive-sheet-frame {
   position: absolute;
   right: var(--sheet-safe-margin);
   left: var(--sheet-safe-margin);
@@ -331,36 +344,68 @@ onBeforeUnmount(() => {
       var(--sheet-safe-margin) - var(--sheet-safe-margin)
   );
   margin-inline: auto;
+  filter:
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12))
+    drop-shadow(0 2px 5px rgba(0, 0, 0, 0.08));
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.immersive-sheet-frame--top {
+  top: max(var(--sheet-safe-margin), env(safe-area-inset-top));
+}
+
+.immersive-sheet-frame--bottom {
+  bottom: max(var(--sheet-safe-margin), env(safe-area-inset-bottom));
+}
+
+.immersive-sheet-frame--dragging {
+  transition: none !important;
+}
+
+.immersive-sheet-frame--prominent {
+  filter:
+    drop-shadow(0 18px 28px rgba(0, 0, 0, 0.2))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+}
+
+.immersive-sheet-panel {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: inherit;
   overflow: hidden;
   border: 1px solid rgba(60, 60, 67, 0.1);
   border-radius: var(--sheet-radius);
   outline: none;
   background: #fff;
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.2),
-    0 4px 16px rgba(0, 0, 0, 0.08);
   pointer-events: auto;
   corner-shape: superellipse(1.2);
   touch-action: pan-y;
-  will-change: transform;
 }
 
-.immersive-sheet-panel--top {
-  top: max(var(--sheet-safe-margin), env(safe-area-inset-top));
-}
-
-.immersive-sheet-panel--bottom {
-  bottom: max(var(--sheet-safe-margin), env(safe-area-inset-bottom));
-}
-
-.immersive-sheet-panel--dragging {
-  transition: none !important;
+.immersive-sheet-frame--sized .immersive-sheet-panel {
+  height: 100%;
 }
 
 .immersive-sheet-content {
   min-height: 0;
   max-height: inherit;
   overflow: hidden;
+}
+
+.immersive-sheet-frame:not(.immersive-sheet-frame--sized) .immersive-sheet-content {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.immersive-sheet-frame:not(.immersive-sheet-frame--sized) .immersive-sheet-content::-webkit-scrollbar {
+  display: none;
 }
 
 .immersive-sheet-content :deep(.sheet-scroll-content) {
