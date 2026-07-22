@@ -97,6 +97,15 @@ function downloadBlob(blob: Blob, fileName: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("品牌图标加载失败"));
+    image.src = src;
+  });
+}
+
 export async function generateWorkoutShareImage(
   options: WorkoutShareOptions,
 ): Promise<Blob> {
@@ -107,6 +116,8 @@ export async function generateWorkoutShareImage(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("当前浏览器无法生成分享图片");
 
+  const brandIcon = await loadImage("/brand-icon.png").catch(() => undefined);
+
   const background = context.createLinearGradient(0, 0, CARD_WIDTH, height);
   background.addColorStop(0, "#f7fbff");
   background.addColorStop(0.52, "#f4f6fa");
@@ -114,12 +125,21 @@ export async function generateWorkoutShareImage(
   context.fillStyle = background;
   context.fillRect(0, 0, CARD_WIDTH, height);
 
-  fillRoundRect(context, CARD_MARGIN, 64, 226, 54, 27, "#e8f3ff");
-  context.fillStyle = "#007aff";
+  if (brandIcon) {
+    context.save();
+    drawRoundRect(context, CARD_MARGIN, 62, 58, 58, 16);
+    context.clip();
+    context.drawImage(brandIcon, CARD_MARGIN, 62, 58, 58);
+    context.restore();
+  } else {
+    fillRoundRect(context, CARD_MARGIN, 62, 58, 58, 16, "#007aff");
+  }
+
+  context.fillStyle = "#1c1c1e";
   context.font =
     '600 24px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
   context.textBaseline = "middle";
-  context.fillText("FITNESS RECORD", CARD_MARGIN + 24, 91);
+  context.fillText("FITNESS RECORD", CARD_MARGIN + 76, 91);
 
   context.fillStyle = "#171719";
   context.font =
