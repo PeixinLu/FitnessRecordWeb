@@ -8,7 +8,7 @@ import { EQUIPMENT_CASES, normalizeEquipmentName, type EquipmentCase } from '@/d
 import { getEquipmentIcon } from '@/utils/equipmentIcon'
 import { MUSCLE_GROUPS, type DataTemplate, type MuscleGroup, type Exercise } from '@/types'
 import { DATA_TEMPLATE_OPTIONS, getTemplateLabel } from '@/utils/dataTemplate'
-import ImmersivePopup from '@/components/ImmersivePopup.vue'
+import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 
 const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{
@@ -448,10 +448,6 @@ onUnmounted(() => {
 
 <template>
   <div
-    v-pull-to-dismiss="{
-      onDismiss: onNavBack,
-      disabled: !embedded || isFlipping,
-    }"
     class="management-flip-stage"
     :class="[
       { 'management-flip-stage--flipping': isFlipping },
@@ -471,7 +467,7 @@ onUnmounted(() => {
       left-arrow
       @click-left="onNavBack"
     />
-    <header v-else class="popup-header">
+    <header v-else class="popup-header" data-sheet-swipe-handle>
       <button
         v-if="sortMode"
         v-smooth-corners="22"
@@ -786,28 +782,17 @@ onUnmounted(() => {
     </div>
 
     <!-- Equipment create/edit card popup -->
-    <ImmersivePopup
+    <ImmersiveSheet
       v-model:show="showEquipmentEditor"
-      :smooth-corners="24"
-      teleport="body"
-      position="bottom"
-      round
-      :style="{
-        width: 'calc(100% - 16px)',
-        left: '8px',
-        bottom: '8px',
-        borderRadius: '24px',
-        background: 'transparent',
-        '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
-        '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
-      }"
+      position="top"
+      :radius="24"
+      swipe-handle="[data-sheet-swipe-handle]"
+      aria-label="编辑器械"
     >
       <div
-        v-smooth-corners="24"
-        v-pull-to-dismiss="() => (showEquipmentEditor = false)"
         class="equipment-editor-card"
       >
-        <div class="editor-card-header">
+        <div class="editor-card-header" data-sheet-swipe-handle>
           <span class="editor-card-title">{{ editingEquipmentId ? '编辑器械' : '新建器械' }}</span>
           <button
             v-smooth-corners="18"
@@ -829,31 +814,20 @@ onUnmounted(() => {
           @keyup.enter="saveEquipment"
         />
       </div>
-    </ImmersivePopup>
+    </ImmersiveSheet>
 
     <!-- Exercise edit card popup -->
-    <ImmersivePopup
+    <ImmersiveSheet
       v-model:show="showExerciseEditor"
-      :smooth-corners="24"
-      teleport="body"
-      position="bottom"
-      round
-      :style="{
-        width: 'calc(100% - 16px)',
-        left: '8px',
-        bottom: '8px',
-        borderRadius: '24px',
-        background: 'transparent',
-        '--van-ease-out': 'cubic-bezier(0.16, 1, 0.3, 1)',
-        '--van-ease-in': 'cubic-bezier(0.16, 1, 0.3, 1)',
-      }"
+      position="top"
+      :radius="24"
+      swipe-handle="[data-sheet-swipe-handle]"
+      aria-label="编辑动作"
     >
       <div
-        v-smooth-corners="24"
-        v-pull-to-dismiss="() => (showExerciseEditor = false)"
         class="exercise-editor-card"
       >
-        <div class="editor-card-header">
+        <div class="editor-card-header" data-sheet-swipe-handle>
           <span class="editor-card-title">{{ editingExerciseId ? '编辑动作' : '新增动作' }}</span>
           <button
             v-smooth-corners="18"
@@ -899,7 +873,7 @@ onUnmounted(() => {
           >{{ option.label }}</button>
         </div>
       </div>
-    </ImmersivePopup>
+    </ImmersiveSheet>
     </div>
   </div>
 </template>
@@ -1577,11 +1551,8 @@ onUnmounted(() => {
 
 /* ===== Equipment editor card popup ===== */
 .equipment-editor-card {
-  background: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  padding: 18px 20px 20px;
 }
 
 .editor-card-header {
@@ -1639,11 +1610,8 @@ onUnmounted(() => {
 
 /* ===== Exercise editor card ===== */
 .exercise-editor-card {
-  background: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  padding: 18px 20px 20px;
 }
 
 /* ===== Pill toggle buttons ===== */
@@ -1810,10 +1778,6 @@ onUnmounted(() => {
     color: #fff;
   }
 
-  .equipment-editor-card {
-    background: rgba(58, 58, 60, 0.76);
-  }
-
   .editor-card-title {
     color: #fff;
   }
@@ -1824,10 +1788,6 @@ onUnmounted(() => {
 
   .editor-confirm-btn {
     background: #0a84ff;
-  }
-
-  .exercise-editor-card {
-    background: rgba(58, 58, 60, 0.76);
   }
 
   .pill-btn {

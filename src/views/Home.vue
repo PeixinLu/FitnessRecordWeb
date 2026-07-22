@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
 import { useExerciseStore } from "@/stores/exercise";
 import { useRecordStore } from "@/stores/record";
 import { showConfirmDialog, showToast } from "vant";
@@ -19,7 +18,6 @@ import EquipmentManagement from "@/views/EquipmentManagement.vue";
 
 const exerciseStore = useExerciseStore();
 const recordStore = useRecordStore();
-const router = useRouter();
 
 // 抽屉状态
 const showDrawer = ref(false);
@@ -117,6 +115,12 @@ function onDrawerClose() {
   showDrawer.value = false;
 }
 
+function openEquipmentManagementFromDrawer() {
+  showDrawer.value = false
+  isNestedDrawerOpen.value = false
+  showEquipmentManager.value = true
+}
+
 // 记录保存成功
 function onRecordSaved() {
   showDrawer.value = false;
@@ -156,7 +160,7 @@ function onRecordSaved() {
         <van-button
           type="primary"
           size="small"
-          @click="router.push('/equipment-management')"
+          @click="showEquipmentManager = true"
           >去添加器械</van-button
         >
       </van-empty>
@@ -269,6 +273,7 @@ function onRecordSaved() {
       @close="onDrawerClose"
       @saved="onRecordSaved"
       @nested-editor-open="isNestedDrawerOpen = $event"
+      @open-equipment-management="openEquipmentManagementFromDrawer"
     />
 
     <ImmersiveSheet
@@ -291,6 +296,8 @@ function onRecordSaved() {
       v-model:show="showEquipmentManager"
       height="90%"
       :radius="38"
+      :swipe-to-dismiss="!isEquipmentManagerFlipping"
+      swipe-handle="[data-sheet-swipe-handle]"
       class="equipment-management-popup"
       :class="{ 'equipment-management-popup--flipping': isEquipmentManagerFlipping }"
       aria-label="器械动作管理"

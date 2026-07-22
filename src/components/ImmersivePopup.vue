@@ -49,14 +49,17 @@ function closeFromOutside(): void {
 }
 
 function onClosed(): void {
-  if (!props.show) leaveEnvironment()
   emit('closed')
 }
 
 watch(
   () => props.show,
   (show) => {
-    if (show) enterEnvironment()
+    if (show) {
+      enterEnvironment()
+      return
+    }
+    leaveEnvironment()
   },
   { immediate: true },
 )

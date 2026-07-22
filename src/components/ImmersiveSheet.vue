@@ -26,6 +26,7 @@ const props = withDefaults(
     radius?: number
     closeOnClickOutside?: boolean
     swipeToDismiss?: boolean
+    swipeHandle?: string
     headerSafeSpace?: number
     footerSafeSpace?: number
     ariaLabel?: string
@@ -138,7 +139,14 @@ function onTouchStart(event: TouchEvent): void {
   if (!props.swipeToDismiss || event.touches.length !== 1) return
   const target = event.target
   if (!(target instanceof HTMLElement)) return
-  if (target.closest('input, textarea, select, [contenteditable="true"]')) return
+  if (
+    target.closest(
+      'button, a, input, textarea, select, [contenteditable="true"], [data-sheet-swipe-ignore]',
+    )
+  ) {
+    return
+  }
+  if (props.swipeHandle && !target.closest(props.swipeHandle)) return
   if (!isAtDismissBoundary(findScrollableAncestor(target))) return
 
   startY = event.touches[0].clientY
@@ -194,7 +202,6 @@ function onAfterEnter(): void {
 
 function onAfterLeave(): void {
   if (props.show) return
-  leaveEnvironment()
   previousFocus?.focus({ preventScroll: true })
   previousFocus = null
   emit('closed')
@@ -207,7 +214,10 @@ function handleKeydown(event: KeyboardEvent): void {
 watch(
   () => props.show,
   async (show) => {
-    if (!show) return
+    if (!show) {
+      leaveEnvironment()
+      return
+    }
     previousFocus = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null

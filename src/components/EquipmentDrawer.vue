@@ -4,7 +4,6 @@ import { useExerciseStore } from "@/stores/exercise";
 import { useRecordStore } from "@/stores/record";
 import SetPicker from "@/components/SetPicker.vue";
 import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
-import ExerciseQuickEditor from "@/components/ExerciseQuickEditor.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import { showToast } from "vant";
 import { getTemplateFields, type TemplateFieldKey } from "@/utils/dataTemplate";
@@ -20,6 +19,7 @@ const emit = defineEmits<{
   close: [];
   saved: [];
   "nested-editor-open": [value: boolean];
+  "open-equipment-management": [];
 }>();
 
 const exerciseStore = useExerciseStore();
@@ -44,15 +44,6 @@ const selectedExercise = computed(() =>
 // 当前页面（0: 选择动作/组数，1: 编辑组详情）
 const currentPage = ref(0);
 const nestedEditorOpen = ref(false);
-const showExerciseEditor = ref(false);
-
-function onExerciseManagerChanged() {
-  // 如果当前选中的动作被删除，则重新选择
-  if (!exerciseList.value.find((e) => e.id === selectedExerciseId.value)) {
-    selectedExerciseId.value =
-      exerciseList.value.length > 0 ? exerciseList.value[0].id : "";
-  }
-}
 
 type TemplateValues = Record<TemplateFieldKey, number>;
 
@@ -97,13 +88,8 @@ watch(
 
 function onNestedEditorVisibility(visible: boolean) {
   nestedEditorOpen.value = visible;
-  emit("nested-editor-open", visible || showExerciseEditor.value);
+  emit("nested-editor-open", visible);
 }
-
-// ExerciseQuickEditor 打开/关闭时也通知主页下沉
-watch(showExerciseEditor, (val) => {
-  emit("nested-editor-open", nestedEditorOpen.value || val);
-});
 
 // ===== 滚轮变化 =====
 function onPickerChange(values: TemplateValues) {
@@ -179,12 +165,13 @@ function closeDrawer() {
     :show="props.show"
     height="80%"
     :radius="24"
+    swipe-handle="[data-sheet-swipe-handle]"
     aria-label="记录训练"
     @update:show="emit('update:show', $event)"
   >
     <div
       class="drawer-container"
-      :class="{ 'nested-drawer-open': nestedEditorOpen || showExerciseEditor }"
+      :class="{ 'nested-drawer-open': nestedEditorOpen }"
     >
       <!-- 页面切换容器 -->
       <div
@@ -193,9 +180,15 @@ function closeDrawer() {
       >
         <!-- 第一页：选择动作和组数 -->
         <div class="page page-1">
-          <header class="drawer-header drawer-header--with-action">
+          <header
+            class="drawer-header drawer-header--with-action"
+            data-sheet-swipe-handle
+          >
             <h2 class="equipment-title">{{ currentEquipment?.name }}</h2>
-            <button class="header-icon-btn" @click="showExerciseEditor = true">
+            <button
+              class="header-icon-btn"
+              @click="emit('open-equipment-management')"
+            >
               <van-icon name="setting-o" size="20" />
             </button>
           </header>
@@ -244,7 +237,7 @@ function closeDrawer() {
 
         <!-- 第二页：编辑组详情 -->
         <div class="page page-2">
-          <header class="drawer-header">
+          <header class="drawer-header" data-sheet-swipe-handle>
             <h2 class="detail-title">
               {{ selectedExercise?.name }} · {{ setDetails.length }}组
             </h2>
@@ -281,12 +274,6 @@ function closeDrawer() {
     </div>
   </ImmersiveSheet>
 
-  <ExerciseQuickEditor
-    v-model:show="showExerciseEditor"
-    :equipment-id="props.equipmentId"
-    @close="showExerciseEditor = false"
-    @changed="onExerciseManagerChanged"
-  />
 </template>
 
 <style scoped>
