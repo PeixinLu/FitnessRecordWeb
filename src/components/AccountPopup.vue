@@ -3,14 +3,25 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
+import { getAccountPreview } from '@/utils/accountPreview'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const authStore = useAuthStore()
 const syncStore = useSyncStore()
+const accountPreview = getAccountPreview()
+const displayedUser = computed(() => authStore.user ?? accountPreview?.user ?? null)
+const isPreviewing = computed(() => !authStore.user && Boolean(accountPreview))
+const displayedSyncTone = computed(() => (
+  authStore.user ? syncStore.indicatorTone : accountPreview?.tone ?? syncStore.indicatorTone
+))
+const displayedStatusLabel = computed(() => (
+  isPreviewing.value ? accountPreview?.statusLabel : syncStore.statusLabel
+))
 
-const avatarText = computed(() => authStore.user?.nickname.slice(0, 1) ?? '')
+const avatarText = computed(() => displayedUser.value?.nickname.slice(0, 1) ?? '')
 const syncDetail = computed(() => {
+  if (isPreviewing.value) return accountPreview?.syncDetail
   if (syncStore.errorMessage) return syncStore.errorMessage
   if (syncStore.lastSyncedAt) {
     return `上次同步 ${new Date(syncStore.lastSyncedAt).toLocaleString()}`
@@ -92,6 +103,14 @@ onUnmounted(() => {
 function close(): void {
   emit('update:show', false)
 }
+
+function syncAccount(): void {
+  if (!isPreviewing.value) void syncStore.syncNow(true)
+}
+
+function logoutAccount(): void {
+  if (!isPreviewing.value) void authStore.logout()
+}
 </script>
 
 <template>
@@ -123,20 +142,30 @@ function close(): void {
         <p>你的本地训练记录会照常保留</p>
       </template>
 
-      <template v-else-if="authStore.user">
-        <div class="account-avatar account-avatar--signed-in">
-          <img
-            v-if="authStore.user.image"
-            :src="authStore.user.image"
-            alt="用户头像"
-          />
-          <span v-else>{{ avatarText }}</span>
+      <template v-else-if="displayedUser">
+        <div class="account-avatar-shell">
+          <div class="account-avatar account-avatar--signed-in">
+            <img
+              v-if="displayedUser.image"
+              :src="displayedUser.image"
+              alt="用户头像"
+            />
+            <span v-else>{{ avatarText }}</span>
+          </div>
         </div>
-        <span class="account-status"><i /> 已登录</span>
-        <h2 id="account-card-title">{{ authStore.user.nickname }}</h2>
-        <p>已通过通行密钥登录</p>
-        <div class="account-feature-note">
-          <span>{{ syncStore.statusLabel }}</span>
+        <h2 id="account-card-title">{{ displayedUser.nickname }}</h2>
+        <div
+          class="account-feature-note"
+          :class="`account-feature-note--${displayedSyncTone}`"
+        >
+          <span class="account-feature-status">
+            <i
+              class="account-sync-indicator account-sync-indicator--inline"
+              :class="`account-sync-indicator--${displayedSyncTone}`"
+              aria-hidden="true"
+            />
+            {{ displayedStatusLabel }}
+          </span>
           <small>{{ syncDetail }}</small>
         </div>
         <div v-if="syncStore.phase === 'decision-required'" class="account-sync-decision">
@@ -160,17 +189,18 @@ function close(): void {
           v-else
           class="account-sync-button"
           type="button"
-          :disabled="syncStore.phase === 'syncing' || syncStore.phase === 'checking'"
-          @click="syncStore.syncNow(true)"
+          :disabled="displayedSyncTone === 'syncing'"
+          @click="syncAccount"
         >
           <van-icon name="replay" size="17" />
           立即同步
         </button>
+        <div class="account-action-divider" aria-hidden="true" />
         <button
           class="account-secondary-button"
           type="button"
           :disabled="authStore.isAuthenticating"
-          @click="authStore.logout"
+          @click="logoutAccount"
         >
           {{ authStore.isAuthenticating ? '正在退出…' : '退出登录' }}
         </button>
@@ -294,6 +324,15 @@ function close(): void {
   color: #007aff;
 }
 
+.account-avatar-shell {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.account-avatar-shell .account-avatar {
+  margin-bottom: 0;
+}
+
 .account-avatar--signed-in {
   overflow: hidden;
   background: linear-gradient(145deg, #2f95ff, #0068db);
@@ -308,21 +347,30 @@ function close(): void {
   object-fit: cover;
 }
 
-.account-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 7px;
-  color: #34c759;
-  font-size: 12px;
-  font-weight: 600;
+.account-sync-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
 }
 
-.account-status i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
+.account-sync-indicator--inline {
+  position: static;
+}
+
+.account-sync-indicator--synced {
+  background: #34c759;
+  box-shadow: 0 0 8px rgba(52, 199, 89, 0.85);
+}
+
+.account-sync-indicator--pending {
+  background: #ff9500;
+  box-shadow: 0 0 8px rgba(255, 149, 0, 0.8);
+}
+
+.account-sync-indicator--syncing {
+  background: #ffd60a;
+  box-shadow: 0 0 8px rgba(255, 214, 10, 0.85);
 }
 
 h2 {
@@ -355,6 +403,27 @@ p {
 .account-feature-note {
   display: grid;
   gap: 3px;
+  margin-top: 18px;
+  transition: background-color 0.2s ease;
+}
+
+.account-feature-note--synced {
+  background: #edf9f0;
+}
+
+.account-feature-note--pending {
+  background: #fff4e5;
+}
+
+.account-feature-note--syncing {
+  background: #fffbe3;
+}
+
+.account-feature-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .account-feature-note span {
@@ -418,14 +487,21 @@ p {
 }
 
 .account-secondary-button {
-  margin-top: 10px;
+  margin-top: 0;
   background: #f2f2f7;
   color: #ff3b30;
 }
 
 .account-sync-button {
-  background: #111;
-  color: #fff;
+  background: #eaf4ff;
+  color: #2876c7;
+}
+
+.account-action-divider {
+  width: 100%;
+  height: 1px;
+  margin: 24px 0 16px;
+  background: rgba(60, 60, 67, 0.16);
 }
 
 .account-primary-button:disabled,
@@ -480,6 +556,18 @@ small {
     color: #d1d1d6;
   }
 
+  .account-feature-note--synced {
+    background: rgba(52, 199, 89, 0.14);
+  }
+
+  .account-feature-note--pending {
+    background: rgba(255, 149, 0, 0.14);
+  }
+
+  .account-feature-note--syncing {
+    background: rgba(255, 214, 10, 0.14);
+  }
+
   .account-feature-note span {
     color: #fff;
   }
@@ -500,8 +588,12 @@ small {
   }
 
   .account-sync-button {
-    background: #fff;
-    color: #111;
+    background: rgba(10, 132, 255, 0.16);
+    color: #64a9f3;
+  }
+
+  .account-action-divider {
+    background: rgba(235, 235, 245, 0.16);
   }
 
   .account-sync-merge-button {

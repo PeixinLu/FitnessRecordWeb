@@ -5,6 +5,7 @@ import { useRecordStore } from '@/stores/record'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import SyncDecisionSheet from '@/components/SyncDecisionSheet.vue'
+import { getAccountPreview } from '@/utils/accountPreview'
 import { showLoadingToast, closeToast } from 'vant'
 
 const exerciseStore = useExerciseStore()
@@ -12,6 +13,7 @@ const recordStore = useRecordStore()
 const authStore = useAuthStore()
 const syncStore = useSyncStore()
 const showSyncDecision = ref(false)
+const accountPreview = getAccountPreview()
 
 watch(
   () => authStore.user?.id,
@@ -37,7 +39,7 @@ onMounted(async () => {
   await exerciseStore.loadData()
   await recordStore.loadRecords()
   closeToast()
-  void authStore.restoreSession()
+  if (!accountPreview) void authStore.restoreSession()
 })
 </script>
 

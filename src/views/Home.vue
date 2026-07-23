@@ -28,10 +28,19 @@ import WorkoutDetail from "@/views/WorkoutDetail.vue";
 import EquipmentManagement from "@/views/EquipmentManagement.vue";
 import AccountPopup from '@/components/AccountPopup.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useSyncStore } from '@/stores/sync'
+import { getAccountPreview } from '@/utils/accountPreview'
 
 const exerciseStore = useExerciseStore();
 const recordStore = useRecordStore();
 const authStore = useAuthStore()
+const syncStore = useSyncStore()
+const accountPreview = getAccountPreview()
+const displayedUser = computed(() => authStore.user ?? accountPreview?.user ?? null)
+const displayedSyncTone = computed(() => (
+  authStore.user ? syncStore.indicatorTone : accountPreview?.tone ?? syncStore.indicatorTone
+))
+const accountAvatarText = computed(() => displayedUser.value?.nickname.slice(0, 1) ?? '')
 const todayWorkoutViewStorageKey = "fitness-record-today-workout-view";
 
 function getInitialTodayWorkoutView(): TodayWorkoutViewMode {
@@ -279,10 +288,25 @@ function onRecordSaved() {
         <button
           class="primary-page-account-button"
           type="button"
-          :aria-label="authStore.user ? `${authStore.user.nickname}，打开账户` : '打开账户'"
+          :aria-label="displayedUser ? `${displayedUser.nickname}，打开账户` : '打开账户'"
           @click="showAccount = true"
         >
-          <van-icon :name="authStore.user ? 'manager' : 'user-o'" size="20" />
+          <template v-if="displayedUser">
+            <span class="home-account-avatar">
+              <img
+                v-if="displayedUser.image"
+                :src="displayedUser.image"
+                alt=""
+              />
+              <span v-else>{{ accountAvatarText }}</span>
+              <i
+                class="sync-indicator"
+                :class="`sync-indicator--${displayedSyncTone}`"
+                aria-hidden="true"
+              />
+            </span>
+          </template>
+          <van-icon v-else name="user-o" size="20" />
         </button>
       </template>
     </PrimaryPageHeader>
@@ -532,6 +556,53 @@ function onRecordSaved() {
 </template>
 
 <style scoped>
+.home-account-avatar {
+  position: relative;
+  display: flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2f95ff, #0068db);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.home-account-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.sync-indicator {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.sync-indicator--synced {
+  background: #34c759;
+  box-shadow: 0 0 7px rgba(52, 199, 89, 0.9);
+}
+
+.sync-indicator--pending {
+  background: #ff9500;
+  box-shadow: 0 0 7px rgba(255, 149, 0, 0.85);
+}
+
+.sync-indicator--syncing {
+  background: #ffd60a;
+  box-shadow: 0 0 7px rgba(255, 214, 10, 0.9);
+}
+
 .home-page {
   position: relative;
   display: flex;
@@ -901,6 +972,10 @@ function onRecordSaved() {
 
 /* ===== 深色模式 ===== */
 @media (prefers-color-scheme: dark) {
+  .sync-indicator {
+    border-color: #3a3a3c;
+  }
+
   .home-page {
     background: #1c1c1e;
   }

@@ -70,6 +70,12 @@ export const useSyncStore = defineStore('sync', () => {
     return '登录后同步'
   })
 
+  const indicatorTone = computed<'synced' | 'pending' | 'syncing'>(() => {
+    if (phase.value === 'syncing' || phase.value === 'checking') return 'syncing'
+    if (phase.value === 'synced' && pendingCount.value === 0) return 'synced'
+    return 'pending'
+  })
+
   async function refreshLocalStatus(): Promise<void> {
     pendingCount.value = await db.syncOutbox.count()
     const state = await db.syncState.get('current')
@@ -337,6 +343,7 @@ export const useSyncStore = defineStore('sync', () => {
     lastSyncedAt,
     errorMessage,
     statusLabel,
+    indicatorTone,
     startScheduler,
     handleAuthenticated,
     handleSignedOut,
