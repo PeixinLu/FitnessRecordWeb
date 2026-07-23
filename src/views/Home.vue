@@ -26,9 +26,12 @@ import {
 import { shareWorkoutCard } from "@/utils/workoutShare";
 import WorkoutDetail from "@/views/WorkoutDetail.vue";
 import EquipmentManagement from "@/views/EquipmentManagement.vue";
+import AccountPopup from '@/components/AccountPopup.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const exerciseStore = useExerciseStore();
 const recordStore = useRecordStore();
+const authStore = useAuthStore()
 const todayWorkoutViewStorageKey = "fitness-record-today-workout-view";
 
 function getInitialTodayWorkoutView(): TodayWorkoutViewMode {
@@ -43,6 +46,7 @@ function getInitialTodayWorkoutView(): TodayWorkoutViewMode {
 
 const todayWorkoutView = ref<TodayWorkoutViewMode>(getInitialTodayWorkoutView());
 const isSharingWorkout = ref(false);
+const showAccount = ref(false)
 
 watch(todayWorkoutView, (view) => {
   try {
@@ -268,6 +272,16 @@ function onRecordSaved() {
     }"
   >
     <PrimaryPageHeader title="记录">
+      <template #account>
+        <button
+          class="primary-page-account-button"
+          type="button"
+          :aria-label="authStore.user ? `${authStore.user.nickname}，打开账户` : '打开账户'"
+          @click="showAccount = true"
+        >
+          <van-icon :name="authStore.user ? 'manager' : 'user-o'" size="20" />
+        </button>
+      </template>
       <template #action>
         <button
           class="primary-page-header-action"
@@ -489,6 +503,8 @@ function onRecordSaved() {
         @flip-state-change="isEquipmentManagerFlipping = $event"
       />
     </ImmersiveSheet>
+
+    <AccountPopup v-model:show="showAccount" />
 
   </div>
 </template>

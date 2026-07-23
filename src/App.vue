@@ -2,12 +2,15 @@
 import { onMounted } from 'vue'
 import { useExerciseStore } from '@/stores/exercise'
 import { useRecordStore } from '@/stores/record'
+import { useAuthStore } from '@/stores/auth'
 import { showLoadingToast, closeToast } from 'vant'
 
 const exerciseStore = useExerciseStore()
 const recordStore = useRecordStore()
+const authStore = useAuthStore()
 
 onMounted(async () => {
+  void authStore.restoreSession()
   showLoadingToast({ message: '加载中...', forbidClick: true })
   await exerciseStore.loadData()
   await recordStore.loadRecords()

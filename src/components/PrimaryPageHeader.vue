@@ -69,6 +69,8 @@ onBeforeUnmount(() => {
 
 <template>
   <header class="primary-page-header">
+    <slot name="account" />
+
     <div class="primary-page-heading">
       <button
         v-if="showBackButton"
@@ -83,25 +85,27 @@ onBeforeUnmount(() => {
       <PrimaryPageTitle :title="title" />
     </div>
 
-    <div v-smooth-corners="16" class="primary-page-menu-capsule">
-      <template v-if="slots.action">
-        <slot name="action" />
-        <span class="primary-page-menu-divider" />
-      </template>
+    <div class="primary-page-header-actions">
+      <div v-smooth-corners="16" class="primary-page-menu-capsule">
+        <template v-if="slots.action">
+          <slot name="action" />
+          <span class="primary-page-menu-divider" />
+        </template>
 
-      <button
-        ref="menuButtonRef"
-        class="primary-page-menu-button"
-        type="button"
-        aria-label="切换页面"
-        :aria-expanded="showMenu"
-        aria-haspopup="menu"
-        @click="showMenu = !showMenu"
-      >
-        <span class="primary-page-menu-dots" aria-hidden="true">
-          <span /><span /><span />
-        </span>
-      </button>
+        <button
+          ref="menuButtonRef"
+          class="primary-page-menu-button"
+          type="button"
+          aria-label="切换页面"
+          :aria-expanded="showMenu"
+          aria-haspopup="menu"
+          @click="showMenu = !showMenu"
+        >
+          <span class="primary-page-menu-dots" aria-hidden="true">
+            <span /><span /><span />
+          </span>
+        </button>
+      </div>
     </div>
 
     <Transition name="primary-page-menu">
@@ -176,11 +180,17 @@ onBeforeUnmount(() => {
   background: rgba(229, 229, 234, 0.9);
 }
 
-.primary-page-menu-capsule {
+.primary-page-header-actions {
   position: absolute;
   top: calc(11px + env(safe-area-inset-top));
   right: 16px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-page-menu-capsule {
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -190,6 +200,31 @@ onBeforeUnmount(() => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+:slotted(.primary-page-account-button) {
+  position: absolute;
+  top: calc(11px + env(safe-area-inset-top));
+  left: 16px;
+  z-index: 3;
+  display: flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 8px rgba(30, 35, 45, 0.08);
+  color: #007aff;
+  cursor: pointer;
+}
+
+:slotted(.primary-page-account-button:active) {
+  transform: scale(0.94);
+  background: rgba(229, 229, 234, 0.9);
 }
 
 .primary-page-menu-button {
@@ -307,6 +342,11 @@ onBeforeUnmount(() => {
   .primary-page-back-button {
     background: rgba(58, 58, 60, 0.82);
     color: #fff;
+  }
+
+  :slotted(.primary-page-account-button) {
+    background: rgba(58, 58, 60, 0.82);
+    color: #0a84ff;
   }
 
   .primary-page-menu-divider {
