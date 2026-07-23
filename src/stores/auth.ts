@@ -20,10 +20,10 @@ function getAuthenticationMessage(error: unknown): string {
 
   switch (error.code) {
     case 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED':
-      return '这个通行密钥已经注册，请直接登录'
+      return '通行密钥已注册，请直接登录'
     case 'ERROR_INVALID_DOMAIN':
     case 'ERROR_INVALID_RP_ID':
-      return '当前域名不符合通行密钥安全要求'
+      return '当前域名不支持通行密钥'
     default:
       return '操作未完成，请稍后重试'
   }

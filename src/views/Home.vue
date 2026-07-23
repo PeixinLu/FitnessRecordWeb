@@ -69,6 +69,7 @@ const isSecondaryPageOpen = computed(
 // 器械管理弹窗
 const showEquipmentManager = ref(false)
 const isEquipmentManagerFlipping = ref(false)
+const equipmentManagerFlipAnimation = ref('')
 const equipmentManagerTargetEquipmentId = ref('')
 const equipmentManagerTargetExerciseId = ref('')
 const equipmentManagerTargetRequestKey = ref(0)
@@ -193,12 +194,14 @@ async function shareTodayWorkout() {
     forbidClick: true,
   });
   try {
-    const result = await shareWorkoutCard({
-      title: "今日训练",
-      date: recordStore.getTodayDate(),
-      items: todayWorkoutExerciseItems.value,
-    });
-    closeToast();
+    const result = await shareWorkoutCard(
+      {
+        title: "今日训练",
+        date: recordStore.getTodayDate(),
+        items: todayWorkoutExerciseItems.value,
+      },
+      closeToast,
+    );
     if (result === "downloaded") showToast("分享不可用，已下载图片");
   } catch {
     closeToast();
@@ -282,15 +285,6 @@ function onRecordSaved() {
           <van-icon :name="authStore.user ? 'manager' : 'user-o'" size="20" />
         </button>
       </template>
-      <template #action>
-        <button
-          class="primary-page-header-action"
-          @click="openEquipmentManagement()"
-        >
-          <van-icon name="setting-o" size="14" color="#007aff" />
-          <span>器械管理</span>
-        </button>
-      </template>
     </PrimaryPageHeader>
 
     <!-- 器械九宫格（固定） -->
@@ -298,6 +292,17 @@ function onRecordSaved() {
       class="equipment-section"
       :class="{ 'single-row': isSingleEquipmentRow }"
     >
+      <div class="equipment-section-header">
+        <h2>我的器械</h2>
+        <button
+          type="button"
+          class="equipment-manage-button"
+          @click="openEquipmentManagement()"
+        >
+          管理
+        </button>
+      </div>
+
       <van-empty
         v-if="equipmentPages.length === 0"
         image="search"
@@ -363,16 +368,6 @@ function onRecordSaved() {
           <span class="records-count">{{ todayWorkoutCount }}</span>
         </div>
         <div class="records-header-actions">
-          <button
-            v-if="todayRecords.length > 0"
-            class="records-share-button"
-            type="button"
-            aria-label="分享今日训练"
-            :disabled="isSharingWorkout"
-            @click="shareTodayWorkout"
-          >
-            <van-icon name="share-o" size="17" />
-          </button>
           <div class="records-view-switch" role="tablist" aria-label="训练记录视图">
             <button
               type="button"
@@ -414,6 +409,26 @@ function onRecordSaved() {
           @delete="deleteWorkoutRecord"
         />
       </div>
+
+      <button
+        v-if="todayRecords.length > 0"
+        class="records-share-button"
+        type="button"
+        aria-label="分享今日训练"
+        :disabled="isSharingWorkout"
+        @click="shareTodayWorkout"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          aria-hidden="true"
+        >
+          <path d="M12 15V3" />
+          <path d="m7.5 7.5 4.5-4.5 4.5 4.5" />
+          <path d="M7 10H5.5A2.5 2.5 0 0 0 3 12.5v6A2.5 2.5 0 0 0 5.5 21h13a2.5 2.5 0 0 0 2.5-2.5v-6a2.5 2.5 0 0 0-2.5-2.5H17" />
+        </svg>
+      </button>
     </section>
 
     <!-- 器械动作抽屉 -->
@@ -491,7 +506,13 @@ function onRecordSaved() {
       :swipe-to-dismiss="!isEquipmentManagerFlipping"
       swipe-handle="[data-sheet-swipe-handle]"
       class="equipment-management-popup"
-      :class="{ 'equipment-management-popup--flipping': isEquipmentManagerFlipping }"
+      :class="[
+        { 'immersive-popup-flip--flipping': isEquipmentManagerFlipping },
+        equipmentManagerFlipAnimation
+          ? `immersive-popup-flip--${equipmentManagerFlipAnimation}`
+          : '',
+      ]"
+      :aria-busy="isEquipmentManagerFlipping"
       aria-label="器械动作管理"
     >
       <EquipmentManagement
@@ -501,6 +522,7 @@ function onRecordSaved() {
         :target-request-key="equipmentManagerTargetRequestKey"
         @close="showEquipmentManager = false"
         @flip-state-change="isEquipmentManagerFlipping = $event"
+        @flip-animation-change="equipmentManagerFlipAnimation = $event"
       />
     </ImmersiveSheet>
 
@@ -520,21 +542,53 @@ function onRecordSaved() {
   background: #f5f5f7;
 }
 
-.equipment-management-popup--flipping {
-  overflow: visible !important;
-  mask-image: none !important;
-  -webkit-mask-image: none !important;
-}
-
 /* ===== 器械区域 ===== */
 .equipment-section {
-  padding: 6px 16px 8px;
+  margin: 6px 16px 8px;
+  padding: 14px 12px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 1px 2px rgba(30, 35, 45, 0.05),
+    0 6px 18px rgba(30, 35, 45, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
   z-index: 9;
   transition: padding 0.22s ease;
+}
+
+.equipment-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  margin: 0 4px 10px;
+}
+
+.equipment-section-header h2 {
+  margin: 0;
+  color: #1c1c1e;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.equipment-manage-button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #007aff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.equipment-manage-button:active {
+  background: rgba(0, 122, 255, 0.1);
 }
 
 .equipment-swipe {
@@ -682,17 +736,44 @@ function onRecordSaved() {
 }
 
 .records-share-button {
+  position: absolute;
+  right: 24px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 4;
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 52px;
+  height: 52px;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 1px 3px rgba(30, 35, 45, 0.08);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 8px 24px rgba(30, 35, 45, 0.18),
+    0 2px 6px rgba(30, 35, 45, 0.12);
   color: #007aff;
+  cursor: pointer;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.records-share-button svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.records-share-button:active:not(:disabled) {
+  transform: scale(0.92);
+  box-shadow:
+    0 4px 12px rgba(30, 35, 45, 0.16),
+    0 1px 3px rgba(30, 35, 45, 0.12);
 }
 
 .records-share-button:disabled {
@@ -786,9 +867,15 @@ function onRecordSaved() {
 
 @media (max-height: 667px) {
   .equipment-section {
-    padding-top: 4px;
-    padding-bottom: 6px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    padding-top: 12px;
+    padding-bottom: 10px;
     top: 0;
+  }
+
+  .equipment-section-header {
+    margin-bottom: 8px;
   }
 
   .equipment-swipe {
@@ -819,11 +906,18 @@ function onRecordSaved() {
   }
 
   .equipment-section {
-    background: #2c2c2e;
+    background: rgba(44, 44, 46, 0.76);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.14),
+      0 6px 18px rgba(0, 0, 0, 0.12);
   }
 
-  .equipment-section {
-    background: rgba(44, 44, 46, 0.76);
+  .equipment-section-header h2 {
+    color: #fff;
+  }
+
+  .equipment-manage-button {
+    color: #0a84ff;
   }
 
   .equipment-card {
@@ -856,7 +950,10 @@ function onRecordSaved() {
   }
 
   .records-share-button {
-    background: #3a3a3c;
+    background: rgba(58, 58, 60, 0.96);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.34),
+      0 2px 6px rgba(0, 0, 0, 0.24);
     color: #0a84ff;
   }
 

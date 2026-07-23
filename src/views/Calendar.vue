@@ -351,12 +351,14 @@ async function shareSelectedWorkout(): Promise<void> {
     forbidClick: true,
   })
   try {
-    const result = await shareWorkoutCard({
-      title: selectedDate.value === todayDate ? '今日训练' : '训练记录',
-      date: selectedDate.value,
-      items: selectedWorkoutItems.value,
-    })
-    closeToast()
+    const result = await shareWorkoutCard(
+      {
+        title: selectedDate.value === todayDate ? '今日训练' : '训练记录',
+        date: selectedDate.value,
+        items: selectedWorkoutItems.value,
+      },
+      closeToast,
+    )
     if (result === 'downloaded') showToast('分享不可用，已下载图片')
   } catch {
     closeToast()

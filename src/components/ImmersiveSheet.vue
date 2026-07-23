@@ -546,23 +546,32 @@ onBeforeUnmount(() => {
 }
 
 .immersive-sheet-bottom-enter-active,
-.immersive-sheet-bottom-leave-active,
-.immersive-sheet-top-enter-active,
-.immersive-sheet-top-leave-active {
+.immersive-sheet-top-enter-active {
   transition:
     opacity 180ms ease,
     transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.immersive-sheet-bottom-enter-from,
-.immersive-sheet-bottom-leave-to {
+.immersive-sheet-bottom-leave-active,
+.immersive-sheet-top-leave-active {
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.immersive-sheet-bottom-enter-from {
   opacity: 0;
   transform: translate3d(0, calc(100% + var(--sheet-safe-margin)), 0);
 }
 
-.immersive-sheet-top-enter-from,
-.immersive-sheet-top-leave-to {
+.immersive-sheet-bottom-leave-to {
+  transform: translate3d(0, calc(100% + var(--sheet-safe-margin)), 0);
+}
+
+.immersive-sheet-top-enter-from {
   opacity: 0;
+  transform: translate3d(0, calc(-100% - var(--sheet-safe-margin)), 0);
+}
+
+.immersive-sheet-top-leave-to {
   transform: translate3d(0, calc(-100% - var(--sheet-safe-margin)), 0);
 }
 

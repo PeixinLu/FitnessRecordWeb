@@ -19,6 +19,7 @@ html.immersive-popup-open .history-page {
 
 html.immersive-popup-open .primary-page-menu-capsule,
 html.immersive-popup-open .primary-page-back-button,
+html.immersive-popup-open .equipment-section,
 html.immersive-popup-open .equipment-card,
 html.immersive-popup-open .record-item,
 html.immersive-popup-open .record-icon,
@@ -67,6 +68,56 @@ body,
   position: relative;
 }
 
+/* Shared whole-panel flip used by immersive popup mode switches. */
+.immersive-popup-flip--flipping {
+  overflow: visible !important;
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: transform;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+
+.immersive-popup-flip--flip-enter-out {
+  animation: immersive-popup-flip-enter-out 160ms ease-in both;
+}
+
+.immersive-popup-flip--flip-enter-in {
+  animation: immersive-popup-flip-enter-in 240ms ease-out both;
+}
+
+.immersive-popup-flip--flip-exit-out {
+  animation: immersive-popup-flip-exit-out 160ms ease-in both;
+}
+
+.immersive-popup-flip--flip-exit-in {
+  animation: immersive-popup-flip-exit-in 240ms ease-out both;
+}
+
+@keyframes immersive-popup-flip-enter-out {
+  0% { transform: perspective(2200px) rotateY(0deg); }
+  100% { transform: perspective(2200px) rotateY(90deg); }
+}
+
+@keyframes immersive-popup-flip-enter-in {
+  0% { transform: perspective(2200px) rotateY(-90deg); }
+  70% { transform: perspective(2200px) rotateY(2.5deg); }
+  88% { transform: perspective(2200px) rotateY(-0.8deg); }
+  100% { transform: perspective(2200px) rotateY(0deg); }
+}
+
+@keyframes immersive-popup-flip-exit-out {
+  0% { transform: perspective(2200px) rotateY(0deg); }
+  100% { transform: perspective(2200px) rotateY(-90deg); }
+}
+
+@keyframes immersive-popup-flip-exit-in {
+  0% { transform: perspective(2200px) rotateY(90deg); }
+  70% { transform: perspective(2200px) rotateY(-2.5deg); }
+  88% { transform: perspective(2200px) rotateY(0.8deg); }
+  100% { transform: perspective(2200px) rotateY(0deg); }
+}
+
 /* iOS-style grabber for card popups that support pull-to-dismiss. */
 .pull-to-dismiss::before {
   position: absolute;
@@ -91,5 +142,12 @@ body,
 @media (prefers-reduced-motion: reduce) {
   :root {
     --app-environment-transition-duration: 0.01ms;
+  }
+
+  .immersive-popup-flip--flip-enter-out,
+  .immersive-popup-flip--flip-enter-in,
+  .immersive-popup-flip--flip-exit-out,
+  .immersive-popup-flip--flip-exit-in {
+    animation: none;
   }
 }

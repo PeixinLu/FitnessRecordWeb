@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PrimaryPageTitle from '@/components/PrimaryPageTitle.vue'
 
@@ -11,7 +11,6 @@ interface PageAction {
 
 defineProps<{ title: string }>()
 
-const slots = useSlots()
 const route = useRoute()
 const router = useRouter()
 const showMenu = ref(false)
@@ -86,17 +85,12 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="primary-page-header-actions">
-      <div v-smooth-corners="16" class="primary-page-menu-capsule">
-        <template v-if="slots.action">
-          <slot name="action" />
-          <span class="primary-page-menu-divider" />
-        </template>
-
+      <div class="primary-page-menu-capsule">
         <button
           ref="menuButtonRef"
           class="primary-page-menu-button"
           type="button"
-          aria-label="切换页面"
+          aria-label="更多"
           :aria-expanded="showMenu"
           aria-haspopup="menu"
           @click="showMenu = !showMenu"
@@ -192,12 +186,15 @@ onBeforeUnmount(() => {
 
 .primary-page-menu-capsule {
   display: flex;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 2px 8px rgba(30, 35, 45, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -229,8 +226,11 @@ onBeforeUnmount(() => {
 
 .primary-page-menu-button {
   display: flex;
+  width: 100%;
+  height: 100%;
   align-items: center;
-  padding: 8px 11px;
+  justify-content: center;
+  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -239,13 +239,13 @@ onBeforeUnmount(() => {
 
 .primary-page-menu-button:active {
   background: rgba(0, 0, 0, 0.06);
+  transform: scale(0.94);
 }
 
 .primary-page-menu-dots {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 2px 0;
+  flex-direction: row;
+  gap: 3px;
 }
 
 .primary-page-menu-dots span {
@@ -253,13 +253,6 @@ onBeforeUnmount(() => {
   height: 3px;
   border-radius: 50%;
   background: #8e8e93;
-}
-
-.primary-page-menu-divider {
-  width: 1px;
-  height: 16px;
-  flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.1);
 }
 
 .primary-page-menu {
@@ -315,25 +308,6 @@ onBeforeUnmount(() => {
   transform: translateY(-4px) scale(0.96);
 }
 
-:slotted(.primary-page-header-action) {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border: 0;
-  background: transparent;
-  color: #1c1c1e;
-  font: inherit;
-  font-size: 13px;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-:slotted(.primary-page-header-action:active) {
-  background: rgba(0, 0, 0, 0.06);
-}
-
 @media (prefers-color-scheme: dark) {
   .primary-page-menu-capsule {
     background: rgba(58, 58, 60, 0.76);
@@ -349,10 +323,6 @@ onBeforeUnmount(() => {
     color: #0a84ff;
   }
 
-  .primary-page-menu-divider {
-    background: rgba(255, 255, 255, 0.15);
-  }
-
   .primary-page-menu {
     border-color: rgba(255, 255, 255, 0.12);
     background: rgba(44, 44, 46, 0.94);
@@ -366,8 +336,5 @@ onBeforeUnmount(() => {
     color: #0a84ff;
   }
 
-  :slotted(.primary-page-header-action) {
-    color: #fff;
-  }
 }
 </style>

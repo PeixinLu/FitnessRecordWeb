@@ -280,8 +280,10 @@ export async function generateWorkoutShareImage(
 
 export async function shareWorkoutCard(
   options: WorkoutShareOptions,
+  onImageReady?: () => void,
 ): Promise<WorkoutShareResult> {
   const blob = await generateWorkoutShareImage(options);
+  onImageReady?.();
   const fileName = `训练记录-${options.date}.png`;
   const file = new File([blob], fileName, { type: "image/png" });
   const shareData: ShareData = { files: [file] };

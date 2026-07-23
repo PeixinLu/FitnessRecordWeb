@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -8,6 +8,77 @@ const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const authStore = useAuthStore()
 
 const avatarText = computed(() => authStore.user?.nickname.slice(0, 1) ?? '')
+type FlipAnimation =
+  | ''
+  | 'flip-enter-out'
+  | 'flip-enter-in'
+  | 'flip-exit-out'
+  | 'flip-exit-in'
+
+const displayedRegistrationSuggested = ref(authStore.registrationSuggested)
+const flipAnimation = ref<FlipAnimation>('')
+const isFlipping = ref(false)
+let flipTimer: ReturnType<typeof setTimeout> | null = null
+
+function waitForFlip(duration: number): Promise<void> {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return nextTick()
+  }
+  return new Promise(resolve => {
+    flipTimer = setTimeout(() => {
+      flipTimer = null
+      resolve()
+    }, duration)
+  })
+}
+
+async function flipToAuthMode(targetRegistrationSuggested: boolean): Promise<void> {
+  if (
+    isFlipping.value ||
+    displayedRegistrationSuggested.value === targetRegistrationSuggested
+  ) return
+
+  isFlipping.value = true
+  flipAnimation.value = targetRegistrationSuggested ? 'flip-enter-out' : 'flip-exit-out'
+  await waitForFlip(160)
+
+  displayedRegistrationSuggested.value = targetRegistrationSuggested
+  if (authStore.registrationSuggested !== targetRegistrationSuggested) {
+    if (targetRegistrationSuggested) authStore.suggestRegistration()
+    else authStore.showLogin()
+  }
+  await nextTick()
+
+  flipAnimation.value = targetRegistrationSuggested ? 'flip-enter-in' : 'flip-exit-in'
+  await waitForFlip(240)
+  flipAnimation.value = ''
+  isFlipping.value = false
+}
+
+watch(
+  () => authStore.registrationSuggested,
+  targetRegistrationSuggested => {
+    if (!props.show) {
+      displayedRegistrationSuggested.value = targetRegistrationSuggested
+      return
+    }
+    void flipToAuthMode(targetRegistrationSuggested)
+  },
+)
+
+watch(
+  () => props.show,
+  show => {
+    if (!show) return
+    displayedRegistrationSuggested.value = authStore.registrationSuggested
+    flipAnimation.value = ''
+    isFlipping.value = false
+  },
+)
+
+onUnmounted(() => {
+  if (flipTimer) clearTimeout(flipTimer)
+})
 
 function close(): void {
   emit('update:show', false)
@@ -18,7 +89,14 @@ function close(): void {
   <ImmersiveSheet
     :show="props.show"
     :radius="24"
+    :swipe-to-dismiss="!isFlipping"
     swipe-handle="[data-sheet-swipe-handle]"
+    class="account-popup"
+    :class="[
+      { 'immersive-popup-flip--flipping': isFlipping },
+      flipAnimation ? `immersive-popup-flip--${flipAnimation}` : '',
+    ]"
+    :aria-busy="isFlipping"
     aria-label="账户"
     @update:show="emit('update:show', $event)"
   >
@@ -47,7 +125,7 @@ function close(): void {
         </div>
         <span class="account-status"><i /> 已登录</span>
         <h2 id="account-card-title">{{ authStore.user.nickname }}</h2>
-        <p>已使用通行密钥安全登录</p>
+        <p>已通过通行密钥登录</p>
         <div class="account-feature-note">
           后续可使用数据同步与训练排行等云端功能
         </div>
@@ -66,24 +144,24 @@ function close(): void {
           <van-icon name="user-o" size="30" />
         </div>
         <h2 id="account-card-title">
-          {{ authStore.registrationSuggested ? '创建你的通行密钥' : '登录账户' }}
+          {{ displayedRegistrationSuggested ? '创建通行密钥' : '通行密钥登录' }}
         </h2>
-        <p v-if="authStore.registrationSuggested">
-          没有找到可用的通行密钥？创建一个即可生成账户并登录。
+        <p v-if="displayedRegistrationSuggested">
+          创建后即可登录，无需设置密码。
         </p>
         <p v-else>
-          使用设备上的指纹、面容或锁屏密码安全登录，无需记住密码。
+          使用指纹、面容或锁屏密码登录。
         </p>
 
         <div v-if="!authStore.passkeySupported" class="account-message">
-          当前浏览器或页面环境不支持通行密钥，你仍可继续使用本地记录。
+          当前环境不支持通行密钥，本地记录不受影响。
         </div>
         <div v-else-if="authStore.errorMessage" class="account-message account-message--error">
           {{ authStore.errorMessage }}
         </div>
 
         <button
-          v-if="authStore.registrationSuggested"
+          v-if="displayedRegistrationSuggested"
           class="account-primary-button"
           type="button"
           :disabled="authStore.isAuthenticating || !authStore.passkeySupported"
@@ -91,7 +169,7 @@ function close(): void {
         >
           <van-loading v-if="authStore.isAuthenticating" size="18" color="currentColor" />
           <van-icon v-else name="shield-o" size="19" />
-          {{ authStore.isAuthenticating ? '正在创建…' : '创建通行密钥并登录' }}
+          {{ authStore.isAuthenticating ? '正在创建…' : '创建并登录' }}
         </button>
         <button
           v-else
@@ -102,7 +180,7 @@ function close(): void {
         >
           <van-loading v-if="authStore.isAuthenticating" size="18" color="currentColor" />
           <van-icon v-else name="shield-o" size="19" />
-          {{ authStore.isAuthenticating ? '等待系统验证…' : '使用通行密钥登录' }}
+          {{ authStore.isAuthenticating ? '正在验证…' : '登录' }}
         </button>
 
         <button
@@ -110,11 +188,11 @@ function close(): void {
           class="account-text-button"
           type="button"
           :disabled="authStore.isAuthenticating"
-          @click="authStore.registrationSuggested ? authStore.showLogin() : authStore.suggestRegistration()"
+          @click="flipToAuthMode(!displayedRegistrationSuggested)"
         >
-          {{ authStore.registrationSuggested ? '我已有通行密钥，返回登录' : '首次使用？创建通行密钥' }}
+          {{ displayedRegistrationSuggested ? '已有通行密钥？登录' : '创建通行密钥' }}
         </button>
-        <small>登录与退出不会删除设备上的训练记录</small>
+        <small>训练记录保存在本机</small>
       </template>
     </section>
   </ImmersiveSheet>

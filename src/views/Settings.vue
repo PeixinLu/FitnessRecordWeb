@@ -78,35 +78,15 @@ import { showConfirmDialog } from 'vant'
 
     <div class="primary-page-body">
       <van-cell-group inset title="导出数据">
-      <van-cell title="导出 JSON" is-link @click="exportJSON">
-        <template #icon>
-          <van-icon name="description" />
-        </template>
-      </van-cell>
-      <van-cell title="导出 CSV" is-link @click="exportCSV">
-        <template #icon>
-          <van-icon name="balance-list-o" />
-        </template>
-      </van-cell>
-      <van-cell title="导出文本" is-link @click="exportText">
-        <template #icon>
-          <van-icon name="notes-o" />
-        </template>
-      </van-cell>
+      <van-cell title="导出 JSON" is-link @click="exportJSON" />
+      <van-cell title="导出 CSV" is-link @click="exportCSV" />
+      <van-cell title="导出文本" is-link @click="exportText" />
       </van-cell-group>
 
       <van-cell-group inset title="数据管理">
-      <van-cell title="器械动作管理" is-link to="/equipment-management">
-        <template #icon>
-          <van-icon name="records-o" />
-        </template>
-      </van-cell>
+      <van-cell title="器械动作管理" is-link to="/equipment-management" />
       <van-cell title="训练记录数" :value="`${recordStore.records.length}条`" />
-      <van-cell title="重置所有数据" is-link @click="clearAllData">
-        <template #icon>
-          <van-icon name="delete-o" color="#ee0a24" />
-        </template>
-      </van-cell>
+      <van-cell title="重置所有数据" is-link @click="clearAllData" />
       </van-cell-group>
 
       <van-cell-group inset title="关于">
@@ -115,11 +95,7 @@ import { showConfirmDialog } from 'vant'
       </van-cell-group>
 
       <van-cell-group inset title="调试">
-      <van-cell title="数字滚轮调试" is-link to="/debug/number-wheel">
-        <template #icon>
-          <van-icon name="setting-o" />
-        </template>
-      </van-cell>
+      <van-cell title="数字滚轮调试" is-link to="/debug/number-wheel" />
       </van-cell-group>
     </div>
   </div>

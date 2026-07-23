@@ -19,6 +19,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   'flip-state-change': [flipping: boolean]
+  'flip-animation-change': [animation: FlipAnimation]
 }>()
 
 const router = useRouter()
@@ -508,6 +509,7 @@ async function flipToSortMode(targetSortMode: boolean) {
   isFlipping.value = true
   emit('flip-state-change', true)
   flipAnimation.value = targetSortMode ? 'flip-enter-out' : 'flip-exit-out'
+  emit('flip-animation-change', flipAnimation.value)
   await waitForFlip(160)
 
   if (targetSortMode) {
@@ -521,8 +523,10 @@ async function flipToSortMode(targetSortMode: boolean) {
   }
 
   flipAnimation.value = targetSortMode ? 'flip-enter-in' : 'flip-exit-in'
+  emit('flip-animation-change', flipAnimation.value)
   await waitForFlip(240)
   flipAnimation.value = ''
+  emit('flip-animation-change', '')
   isFlipping.value = false
   emit('flip-state-change', false)
   return true
@@ -568,6 +572,7 @@ watch(selectedSortEquipmentId, async () => {
 onUnmounted(() => {
   destroySortables()
   if (flipTimer) clearTimeout(flipTimer)
+  emit('flip-animation-change', '')
   emit('flip-state-change', false)
 })
 </script>
@@ -576,8 +581,8 @@ onUnmounted(() => {
   <div
     class="management-flip-stage"
     :class="[
-      { 'management-flip-stage--flipping': isFlipping },
-      flipAnimation ? `management-flip-stage--${flipAnimation}` : '',
+      { 'management-flip-stage--flipping': isFlipping && !embedded },
+      flipAnimation && !embedded ? `management-flip-stage--${flipAnimation}` : '',
     ]"
     :aria-busy="isFlipping"
   >
