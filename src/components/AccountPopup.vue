@@ -2,12 +2,21 @@
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useSyncStore } from '@/stores/sync'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
 const authStore = useAuthStore()
+const syncStore = useSyncStore()
 
 const avatarText = computed(() => authStore.user?.nickname.slice(0, 1) ?? '')
+const syncDetail = computed(() => {
+  if (syncStore.errorMessage) return syncStore.errorMessage
+  if (syncStore.lastSyncedAt) {
+    return `上次同步 ${new Date(syncStore.lastSyncedAt).toLocaleString()}`
+  }
+  return '登录状态下会自动同步本机数据'
+})
 type FlipAnimation =
   | ''
   | 'flip-enter-out'
@@ -127,8 +136,36 @@ function close(): void {
         <h2 id="account-card-title">{{ authStore.user.nickname }}</h2>
         <p>已通过通行密钥登录</p>
         <div class="account-feature-note">
-          后续可使用数据同步与训练排行等云端功能
+          <span>{{ syncStore.statusLabel }}</span>
+          <small>{{ syncDetail }}</small>
         </div>
+        <div v-if="syncStore.phase === 'decision-required'" class="account-sync-decision">
+          <button
+            class="account-sync-button"
+            type="button"
+            @click="syncStore.useCloudData"
+          >
+            使用云端数据（推荐）
+          </button>
+          <button
+            class="account-sync-merge-button"
+            type="button"
+            @click="syncStore.mergeLocalData"
+          >
+            合并本机数据
+          </button>
+          <small>合并后，本机数据会同步到其他设备和排行榜。</small>
+        </div>
+        <button
+          v-else
+          class="account-sync-button"
+          type="button"
+          :disabled="syncStore.phase === 'syncing' || syncStore.phase === 'checking'"
+          @click="syncStore.syncNow(true)"
+        >
+          <van-icon name="replay" size="17" />
+          立即同步
+        </button>
         <button
           class="account-secondary-button"
           type="button"
@@ -315,13 +352,29 @@ p {
   line-height: 1.45;
 }
 
+.account-feature-note {
+  display: grid;
+  gap: 3px;
+}
+
+.account-feature-note span {
+  color: #1c1c1e;
+  font-weight: 600;
+}
+
+.account-feature-note small {
+  color: #6e6e73;
+  line-height: 1.4;
+}
+
 .account-message--error {
   background: #fff3f1;
   color: #b42318;
 }
 
 .account-primary-button,
-.account-secondary-button {
+.account-secondary-button,
+.account-sync-button {
   display: flex;
   width: 100%;
   min-height: 48px;
@@ -335,6 +388,29 @@ p {
   font-weight: 600;
 }
 
+.account-sync-decision {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.account-sync-merge-button {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.account-sync-decision small {
+  color: #8e8e93;
+  line-height: 1.4;
+}
+
 .account-primary-button {
   background: #111;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
@@ -342,12 +418,19 @@ p {
 }
 
 .account-secondary-button {
+  margin-top: 10px;
   background: #f2f2f7;
   color: #ff3b30;
 }
 
+.account-sync-button {
+  background: #111;
+  color: #fff;
+}
+
 .account-primary-button:disabled,
 .account-secondary-button:disabled,
+.account-sync-button:disabled,
 .account-text-button:disabled {
   opacity: 0.5;
 }
@@ -397,6 +480,14 @@ small {
     color: #d1d1d6;
   }
 
+  .account-feature-note span {
+    color: #fff;
+  }
+
+  .account-feature-note small {
+    color: #aeaeb2;
+  }
+
   .account-message--error {
     background: rgba(255, 69, 58, 0.14);
     color: #ff6961;
@@ -406,6 +497,16 @@ small {
     background: #fff;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
     color: #111;
+  }
+
+  .account-sync-button {
+    background: #fff;
+    color: #111;
+  }
+
+  .account-sync-merge-button {
+    background: #2c2c2e;
+    color: #fff;
   }
 }
 </style>

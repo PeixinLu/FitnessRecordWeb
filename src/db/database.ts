@@ -1,10 +1,14 @@
 import Dexie, { type Table } from 'dexie'
 import type { Equipment, Exercise, WorkoutRecord } from '@/types'
+import type { SyncLease, SyncOutboxItem, SyncState } from '@/sync/types'
 
 class FitnessDatabase extends Dexie {
   equipments!: Table<Equipment>
   exercises!: Table<Exercise>
   records!: Table<WorkoutRecord>
+  syncOutbox!: Table<SyncOutboxItem>
+  syncState!: Table<SyncState>
+  syncLease!: Table<SyncLease>
 
   constructor() {
     super('FitnessRecordDB')
@@ -51,6 +55,21 @@ class FitnessDatabase extends Dexie {
           await tx.table('exercises').update(equipmentExercises[i].id, { order: i })
         }
       }
+    })
+    this.version(5).stores({
+      equipments: 'id, name, order',
+      exercises: 'id, name, equipmentId, muscleGroup, order',
+      records: 'id, date, exerciseId, createdAt',
+      syncOutbox: 'key, mutationId, nextAttemptAt, createdAt',
+      syncState: 'id, userId',
+    })
+    this.version(6).stores({
+      equipments: 'id, name, order',
+      exercises: 'id, name, equipmentId, muscleGroup, order',
+      records: 'id, date, exerciseId, createdAt',
+      syncOutbox: 'key, mutationId, nextAttemptAt, createdAt',
+      syncState: 'id, userId',
+      syncLease: 'id, expiresAt',
     })
   }
 }

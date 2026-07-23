@@ -3,6 +3,11 @@ import { ref, computed } from 'vue'
 import { db } from '@/db/database'
 import type { WorkoutRecord } from '@/types'
 import { formatLocalDate } from '@/utils/date'
+import {
+  addRecordWithSync,
+  deleteRecordWithSync,
+  updateRecordWithSync,
+} from '@/repositories/fitnessRepository'
 
 export const useRecordStore = defineStore('record', () => {
   const records = ref<WorkoutRecord[]>([])
@@ -45,22 +50,22 @@ export const useRecordStore = defineStore('record', () => {
   async function addRecord(record: Omit<WorkoutRecord, 'id' | 'createdAt'>) {
     const newRecord: WorkoutRecord = {
       ...record,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: crypto.randomUUID(),
       createdAt: Date.now(),
     }
-    await db.records.add(newRecord)
+    await addRecordWithSync(newRecord)
     records.value.unshift(newRecord)
     return newRecord
   }
 
   // 删除记录
   async function deleteRecord(id: string) {
-    await db.records.delete(id)
+    await deleteRecordWithSync(id)
     records.value = records.value.filter(r => r.id !== id)
   }
 
   async function updateRecord(id: string, changes: Partial<Omit<WorkoutRecord, 'id' | 'createdAt'>>) {
-    await db.records.update(id, changes)
+    await updateRecordWithSync(id, changes)
     records.value = records.value.map(record =>
       record.id === id ? { ...record, ...changes } : record
     )

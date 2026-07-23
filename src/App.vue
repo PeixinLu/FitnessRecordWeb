@@ -1,25 +1,49 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useExerciseStore } from '@/stores/exercise'
 import { useRecordStore } from '@/stores/record'
 import { useAuthStore } from '@/stores/auth'
+import { useSyncStore } from '@/stores/sync'
+import SyncDecisionSheet from '@/components/SyncDecisionSheet.vue'
 import { showLoadingToast, closeToast } from 'vant'
 
 const exerciseStore = useExerciseStore()
 const recordStore = useRecordStore()
 const authStore = useAuthStore()
+const syncStore = useSyncStore()
+const showSyncDecision = ref(false)
+
+watch(
+  () => authStore.user?.id,
+  userId => {
+    if (userId) {
+      void syncStore.handleAuthenticated(userId)
+    } else {
+      syncStore.handleSignedOut()
+    }
+  },
+)
+
+watch(
+  () => syncStore.phase,
+  phase => {
+    if (phase === 'decision-required') showSyncDecision.value = true
+  },
+)
 
 onMounted(async () => {
-  void authStore.restoreSession()
+  syncStore.startScheduler()
   showLoadingToast({ message: '加载中...', forbidClick: true })
   await exerciseStore.loadData()
   await recordStore.loadRecords()
   closeToast()
+  void authStore.restoreSession()
 })
 </script>
 
 <template>
   <div id="app-popup-root" />
+  <SyncDecisionSheet v-model:show="showSyncDecision" />
   <div class="app-container">
     <main class="main-content">
       <router-view />

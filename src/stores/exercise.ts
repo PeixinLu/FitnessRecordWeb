@@ -3,6 +3,18 @@ import { ref, computed } from 'vue'
 import { db, initDefaultData } from '@/db/database'
 import type { Equipment, Exercise, MuscleGroup, DataTemplate } from '@/types'
 import { normalizeEquipmentName, type EquipmentCase } from '@/data/equipmentCases'
+import {
+  addCaseEntitiesWithSync,
+  addEquipmentWithSync,
+  addExerciseWithSync,
+  deleteEquipmentWithSync,
+  deleteExerciseWithSync,
+  replaceEquipmentOrderWithSync,
+  replaceExerciseOrderWithSync,
+  resetAllDataWithSync,
+  updateEquipmentWithSync,
+  updateExerciseWithSync,
+} from '@/repositories/fitnessRepository'
 
 interface ExerciseInput {
   name: string
@@ -49,8 +61,8 @@ export const useExerciseStore = defineStore('exercise', () => {
     exercises.value = exs
   }
 
-  function createId(prefix: string): string {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  function createId(): string {
+    return crypto.randomUUID()
   }
 
   async function addEquipment(name: string) {
@@ -59,8 +71,14 @@ export const useExerciseStore = defineStore('exercise', () => {
       throw new Error('器械名称已存在')
     }
     const maxOrder = equipments.value.reduce((max, eq) => Math.max(max, eq.order ?? 0), -1)
-    const id = createId('equipment')
-    await db.equipments.add({ id, name, normalizedName, source: 'manual', order: maxOrder + 1 })
+    const id = createId()
+    await addEquipmentWithSync({
+      id,
+      name,
+      normalizedName,
+      source: 'manual',
+      order: maxOrder + 1,
+    })
     await loadData()
     return id
   }
@@ -70,15 +88,12 @@ export const useExerciseStore = defineStore('exercise', () => {
     if (equipments.value.some(item => item.id !== id && (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('器械名称已存在')
     }
-    await db.equipments.update(id, { name, normalizedName })
+    await updateEquipmentWithSync(id, { name, normalizedName })
     await loadData()
   }
 
   async function deleteEquipment(id: string) {
-    await db.transaction('rw', db.equipments, db.exercises, async () => {
-      await db.exercises.where('equipmentId').equals(id).delete()
-      await db.equipments.delete(id)
-    })
+    await deleteEquipmentWithSync(id)
     if (selectedEquipmentId.value === id) selectedEquipmentId.value = ''
     if (exercises.value.some(exercise => exercise.equipmentId === id && exercise.id === selectedExerciseId.value)) {
       selectedExerciseId.value = ''
@@ -94,8 +109,8 @@ export const useExerciseStore = defineStore('exercise', () => {
     const maxOrder = exercises.value
       .filter(exercise => exercise.equipmentId === input.equipmentId)
       .reduce((max, exercise) => Math.max(max, exercise.order ?? 0), -1)
-    const id = createId('exercise')
-    await db.exercises.add({
+    const id = createId()
+    await addExerciseWithSync({
       id,
       ...input,
       normalizedName,
@@ -111,12 +126,12 @@ export const useExerciseStore = defineStore('exercise', () => {
     if (exercises.value.some(item => item.id !== id && item.equipmentId === input.equipmentId && (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('动作名称已存在')
     }
-    await db.exercises.update(id, { ...input, normalizedName })
+    await updateExerciseWithSync(id, { ...input, normalizedName })
     await loadData()
   }
 
   async function deleteExercise(id: string) {
-    await db.exercises.delete(id)
+    await deleteExerciseWithSync(id)
     if (selectedExerciseId.value === id) selectedExerciseId.value = ''
     await loadData()
   }
@@ -124,28 +139,30 @@ export const useExerciseStore = defineStore('exercise', () => {
   async function addCaseEquipment(equipmentCase: EquipmentCase, actionIds: string[]) {
     const normalizedName = normalizeEquipmentName(equipmentCase.name)
     let target = equipments.value.find(item => (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)
+    let newEquipment: Equipment | null = null
     if (!target) {
       const maxOrder = equipments.value.reduce((max, eq) => Math.max(max, eq.order ?? 0), -1)
       target = {
-        id: createId('equipment'),
+        id: createId(),
         name: equipmentCase.name,
         normalizedName,
         icon: equipmentCase.icon,
         source: 'case',
         order: maxOrder + 1,
       }
-      await db.equipments.add(target)
+      newEquipment = target
     }
     const selectedActions = equipmentCase.actions.filter(action => actionIds.includes(action.id))
     let nextOrder = exercises.value
       .filter(exercise => exercise.equipmentId === target.id)
       .reduce((max, exercise) => Math.max(max, exercise.order ?? 0), -1) + 1
+    const newExercises: Exercise[] = []
     for (const action of selectedActions) {
       const actionName = normalizeEquipmentName(action.name)
       const exists = exercises.value.some(item => item.equipmentId === target.id && (item.normalizedName ?? normalizeEquipmentName(item.name)) === actionName)
       if (!exists) {
-        await db.exercises.add({
-          id: createId('exercise'),
+        newExercises.push({
+          id: createId(),
           name: action.name,
           normalizedName: actionName,
           equipmentId: target.id,
@@ -156,27 +173,20 @@ export const useExerciseStore = defineStore('exercise', () => {
         })
       }
     }
+    await addCaseEntitiesWithSync(newEquipment, newExercises)
     await loadData()
     return target.id
   }
 
   async function resetAllData() {
-    await db.transaction('rw', db.records, db.exercises, db.equipments, async () => {
-      await db.records.clear()
-      await db.exercises.clear()
-      await db.equipments.clear()
-    })
+    await resetAllDataWithSync()
     selectedEquipmentId.value = ''
     selectedExerciseId.value = ''
     await loadData()
   }
 
   async function reorderEquipments(orderedIds: string[]) {
-    await db.transaction('rw', db.equipments, async () => {
-      for (let i = 0; i < orderedIds.length; i++) {
-        await db.equipments.update(orderedIds[i], { order: i })
-      }
-    })
+    await replaceEquipmentOrderWithSync(orderedIds)
     // Update local state without full reload
     for (let i = 0; i < orderedIds.length; i++) {
       const eq = equipments.value.find(e => e.id === orderedIds[i])
@@ -192,11 +202,7 @@ export const useExerciseStore = defineStore('exercise', () => {
         .map(exercise => exercise.id),
     )
     const validOrderedIds = orderedIds.filter(id => equipmentExerciseIds.has(id))
-    await db.transaction('rw', db.exercises, async () => {
-      for (let i = 0; i < validOrderedIds.length; i++) {
-        await db.exercises.update(validOrderedIds[i], { order: i })
-      }
-    })
+    await replaceExerciseOrderWithSync(validOrderedIds)
     for (let i = 0; i < validOrderedIds.length; i++) {
       const exercise = exercises.value.find(item => item.id === validOrderedIds[i])
       if (exercise) exercise.order = i
