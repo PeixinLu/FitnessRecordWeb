@@ -8,6 +8,7 @@ import { EQUIPMENT_CASES, normalizeEquipmentName, type EquipmentCase } from '@/d
 import { getEquipmentIcon } from '@/utils/equipmentIcon'
 import { MUSCLE_GROUPS, type DataTemplate, type MuscleGroup, type Exercise } from '@/types'
 import { DATA_TEMPLATE_OPTIONS, getTemplateLabel } from '@/utils/dataTemplate'
+import EquipmentEmptyState from '@/components/EquipmentEmptyState.vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 
 const props = defineProps<{
@@ -631,11 +632,11 @@ onUnmounted(() => {
       <button
         v-else
         v-smooth-corners="22"
-        class="popup-add-btn"
-        @click="openCreateEquipment"
-        aria-label="添加器械"
+        class="popup-done-btn"
+        @click="onNavBack"
+        aria-label="完成"
       >
-        <van-icon name="plus" size="20" color="#fff" />
+        <van-icon name="success" size="18" color="#fff" />
       </button>
     </header>
 
@@ -749,9 +750,10 @@ onUnmounted(() => {
       <!-- ====== 我的器械 ====== -->
       <div v-if="!searchQuery || filteredEquipments.length" class="section-label">我的器械</div>
 
-      <van-empty
+      <EquipmentEmptyState
         v-if="exerciseStore.equipments.length === 0 && !searchQuery"
-        description="还没有器械，从下方器械库添加或新建"
+        class="management-empty-state"
+        message="还没有常用器械，可从器械库添加"
       />
       <van-empty
         v-else-if="exerciseStore.equipments.length > 0 && filteredEquipments.length === 0 && searchQuery"
@@ -810,9 +812,10 @@ onUnmounted(() => {
             <div v-if="expandedEquipmentId === equipment.id" class="equipment-card-body">
               <div class="equipment-card-content">
                 <div class="exercise-list">
-                  <van-empty
+                  <EquipmentEmptyState
                     v-if="getEquipmentExercises(equipment.id).length === 0"
-                    description="暂无动作"
+                    compact
+                    message="还没有动作"
                   />
                   <van-swipe-cell
                     v-for="exercise in getEquipmentExercises(equipment.id)"
@@ -875,6 +878,16 @@ onUnmounted(() => {
           </div>
         </template>
       </van-swipe-cell>
+      </div>
+
+      <div
+        v-if="!searchQuery"
+        v-smooth-corners="12"
+        class="add-exercise-row add-equipment-row"
+        @click="openCreateEquipment"
+      >
+        <van-icon name="plus" size="16" color="#007aff" />
+        <span>新增器械</span>
       </div>
 
       <!-- ====== 器械库 ====== -->
@@ -1180,7 +1193,7 @@ onUnmounted(() => {
 }
 
 .sort-confirm-btn,
-.popup-add-btn {
+.popup-done-btn {
   position: absolute;
   right: 16px;
   top: 50%;
@@ -1199,7 +1212,7 @@ onUnmounted(() => {
 }
 
 .sort-confirm-btn:active,
-.popup-add-btn:active {
+.popup-done-btn:active {
   transform: translateY(-50%) scale(0.92);
 }
 
@@ -1281,6 +1294,10 @@ onUnmounted(() => {
 .management-page--embedded .equipment-list {
   padding-top: 0;
   padding-bottom: 16px;
+}
+
+.management-empty-state {
+  margin: 6px 0 12px;
 }
 
 .sort-workspace {
@@ -1643,6 +1660,10 @@ onUnmounted(() => {
   background: rgba(0, 122, 255, 0.12);
 }
 
+.add-equipment-row {
+  margin-top: 8px;
+}
+
 /* ===== Equipment swipe actions ===== */
 .equipment-swipe-actions {
   display: flex;
@@ -1892,7 +1913,7 @@ onUnmounted(() => {
   }
 
   .sort-confirm-btn,
-  .popup-add-btn {
+  .popup-done-btn {
     background: #0a84ff;
   }
 

@@ -39,6 +39,7 @@ function getAuthenticationMessage(error: unknown): string {
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<CurrentUser | null>(null)
   const isRestoring = ref(false)
+  const hasRestoredSession = ref(false)
   const isAuthenticating = ref(false)
   const errorMessage = ref('')
   const registrationSuggested = ref(false)
@@ -55,6 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
       errorMessage.value = getAuthenticationMessage(error)
     } finally {
       isRestoring.value = false
+      hasRestoredSession.value = true
     }
   }
 
@@ -64,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     errorMessage.value = ''
     try {
       user.value = await signInWithPasskey()
+      hasRestoredSession.value = true
       registrationSuggested.value = user.value === null
       return user.value !== null
     } catch (error) {
@@ -83,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     errorMessage.value = ''
     try {
       user.value = await registerPasskey()
+      hasRestoredSession.value = true
       registrationSuggested.value = false
       return user.value !== null
     } catch (error) {
@@ -102,6 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await signOut()
       user.value = null
+      hasRestoredSession.value = true
       registrationSuggested.value = false
       return true
     } catch (error) {
@@ -114,6 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function acceptAuthenticatedUser(authenticatedUser: CurrentUser): void {
     user.value = authenticatedUser
+    hasRestoredSession.value = true
     registrationSuggested.value = false
     errorMessage.value = ''
   }
@@ -138,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     isRestoring,
+    hasRestoredSession,
     isAuthenticating,
     errorMessage,
     registrationSuggested,
