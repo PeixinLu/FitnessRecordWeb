@@ -10,9 +10,16 @@ import {
   signOut,
   type CurrentUser,
 } from '@/api/auth'
+import { AuthRequestError } from '@/api/email-auth'
 
 function getAuthenticationMessage(error: unknown): string {
   if (error instanceof TypeError) return '暂时无法连接认证服务，本地记录不受影响'
+  if (error instanceof AuthRequestError) {
+    if (error.status === 429) return '操作过于频繁，请稍后再试'
+    if (error.status === 403) return '当前页面来源不受认证服务信任'
+    if (error.status >= 500) return '云服务暂时不可用，本地记录不受影响'
+    return '操作未完成，请稍后重试'
+  }
   if (!(error instanceof AuthenticationError)) return '操作未完成，请稍后重试'
   if (error.status === 429) return '操作过于频繁，请稍后再试'
   if (error.status === 403) return '当前页面来源不受认证服务信任'
@@ -105,6 +112,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function acceptAuthenticatedUser(authenticatedUser: CurrentUser): void {
+    user.value = authenticatedUser
+    registrationSuggested.value = false
+    errorMessage.value = ''
+  }
+
+  function refreshAuthenticatedUser(updatedUser: CurrentUser): boolean {
+    if (!user.value || user.value.id !== updatedUser.id) return false
+    user.value = updatedUser
+    errorMessage.value = ''
+    return true
+  }
+
   function suggestRegistration(): void {
     registrationSuggested.value = true
     errorMessage.value = ''
@@ -126,6 +146,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    acceptAuthenticatedUser,
+    refreshAuthenticatedUser,
     suggestRegistration,
     showLogin,
   }

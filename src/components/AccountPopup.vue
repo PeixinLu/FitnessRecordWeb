@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
+import EmailAuthForm from '@/components/EmailAuthForm.vue'
+import type { CurrentUser } from '@/api/auth-types'
 import { useAuthStore } from '@/stores/auth'
 import { useSyncStore } from '@/stores/sync'
 import { getAccountPreview } from '@/utils/accountPreview'
@@ -18,6 +20,21 @@ const displayedSyncTone = computed(() => (
 const displayedStatusLabel = computed(() => (
   isPreviewing.value ? accountPreview?.statusLabel : syncStore.statusLabel
 ))
+const emailMode = ref<'none' | 'sign-in' | 'bind'>('none')
+const securityMessage = ref('')
+const canBindEmail = computed(() => {
+  const user = authStore.user
+  return Boolean(
+    user
+    && user.authMethods.passkey
+    && !user.authMethods.email
+    && !user.emailVerified,
+  )
+})
+const canAddPasskey = computed(() => {
+  const user = authStore.user
+  return Boolean(user?.authMethods.email && !user.authMethods.passkey)
+})
 
 const avatarText = computed(() => displayedUser.value?.nickname.slice(0, 1) ?? '')
 const syncDetail = computed(() => {
@@ -89,7 +106,11 @@ watch(
 watch(
   () => props.show,
   show => {
-    if (!show) return
+    if (!show) {
+      emailMode.value = 'none'
+      securityMessage.value = ''
+      return
+    }
     displayedRegistrationSuggested.value = authStore.registrationSuggested
     flipAnimation.value = ''
     isFlipping.value = false
@@ -110,6 +131,46 @@ function syncAccount(): void {
 
 function logoutAccount(): void {
   if (!isPreviewing.value) void authStore.logout()
+}
+
+async function switchAccount(): Promise<void> {
+  if (isPreviewing.value || !await authStore.logout()) return
+  authStore.showLogin()
+}
+
+function handleEmailAuthenticated(
+  user: CurrentUser,
+  otherSessionsRevoked = true,
+): void {
+  if (emailMode.value === 'bind') {
+    if (!authStore.refreshAuthenticatedUser(user)) {
+      handleAccountMismatch()
+      return
+    }
+    securityMessage.value = otherSessionsRevoked
+      ? '邮箱已绑定，现在可以使用邮箱验证码登录当前账户'
+      : '邮箱已绑定，但未能退出其他设备；请重新登录并检查账户安全'
+  } else {
+    authStore.acceptAuthenticatedUser(user)
+  }
+  emailMode.value = 'none'
+}
+
+function handleAccountMismatch(): void {
+  emailMode.value = 'none'
+  securityMessage.value = '账户身份发生异常变化，已停止同步，请退出后重新登录'
+  syncStore.handleSignedOut()
+  void authStore.logout()
+}
+
+function handleSessionExpired(): void {
+  emailMode.value = 'none'
+  securityMessage.value = '登录状态已失效，请重新登录'
+  void authStore.restoreSession()
+}
+
+function addPasskeyToAccount(): void {
+  if (!isPreviewing.value) void authStore.register()
 }
 </script>
 
@@ -142,6 +203,17 @@ function logoutAccount(): void {
         <p>你的本地训练记录会照常保留</p>
       </template>
 
+      <template v-else-if="displayedUser && emailMode === 'bind'">
+        <EmailAuthForm
+          mode="bind"
+          :expected-user-id="authStore.user?.id"
+          @authenticated="handleEmailAuthenticated"
+          @cancel="emailMode = 'none'"
+          @account-mismatch="handleAccountMismatch"
+          @session-expired="handleSessionExpired"
+        />
+      </template>
+
       <template v-else-if="displayedUser">
         <div class="account-avatar-shell">
           <div class="account-avatar account-avatar--signed-in">
@@ -154,6 +226,53 @@ function logoutAccount(): void {
           </div>
         </div>
         <h2 id="account-card-title">{{ displayedUser.nickname }}</h2>
+        <div class="account-security-card">
+          <div class="account-security-row">
+            <span>
+              <van-icon name="envelop-o" size="16" />
+              邮箱
+            </span>
+            <small>
+              {{ displayedUser.authMethods.email ? displayedUser.email : '未绑定' }}
+            </small>
+          </div>
+          <div class="account-security-row">
+            <span>
+              <van-icon name="shield-o" size="16" />
+              通行密钥
+            </span>
+            <small>{{ displayedUser.authMethods.passkey ? '已启用' : '未添加' }}</small>
+          </div>
+          <button
+            v-if="canBindEmail"
+            class="account-security-button"
+            type="button"
+            @click="emailMode = 'bind'"
+          >
+            绑定邮箱作为恢复方式
+          </button>
+          <button
+            v-else-if="canAddPasskey"
+            class="account-security-button"
+            type="button"
+            :disabled="authStore.isAuthenticating || !authStore.passkeySupported"
+            @click="addPasskeyToAccount"
+          >
+            <van-loading
+              v-if="authStore.isAuthenticating"
+              size="16"
+              color="currentColor"
+            />
+            {{ authStore.isAuthenticating ? '正在添加…' : '为当前账户添加通行密钥' }}
+          </button>
+        </div>
+        <div
+          v-if="securityMessage || authStore.errorMessage"
+          class="account-message"
+          :class="{ 'account-message--error': authStore.errorMessage }"
+        >
+          {{ authStore.errorMessage || securityMessage }}
+        </div>
         <div
           class="account-feature-note"
           :class="`account-feature-note--${displayedSyncTone}`"
@@ -168,7 +287,25 @@ function logoutAccount(): void {
           </span>
           <small>{{ syncDetail }}</small>
         </div>
-        <div v-if="syncStore.phase === 'decision-required'" class="account-sync-decision">
+        <div v-if="syncStore.phase === 'account-mismatch'" class="account-sync-decision">
+          <button
+            class="account-sync-button"
+            type="button"
+            @click="close"
+          >
+            保留本地数据，暂不同步
+          </button>
+          <button
+            class="account-sync-merge-button"
+            type="button"
+            :disabled="authStore.isAuthenticating"
+            @click="switchAccount"
+          >
+            {{ authStore.isAuthenticating ? '正在退出…' : '切换回原账户' }}
+          </button>
+          <small>不会覆盖、迁移或删除本机训练数据。</small>
+        </div>
+        <div v-else-if="syncStore.phase === 'decision-required'" class="account-sync-decision">
           <button
             class="account-sync-button"
             type="button"
@@ -204,6 +341,14 @@ function logoutAccount(): void {
         >
           {{ authStore.isAuthenticating ? '正在退出…' : '退出登录' }}
         </button>
+      </template>
+
+      <template v-else-if="emailMode === 'sign-in'">
+        <EmailAuthForm
+          mode="sign-in"
+          @authenticated="handleEmailAuthenticated"
+          @cancel="emailMode = 'none'"
+        />
       </template>
 
       <template v-else>
@@ -258,6 +403,18 @@ function logoutAccount(): void {
           @click="flipToAuthMode(!displayedRegistrationSuggested)"
         >
           {{ displayedRegistrationSuggested ? '已有通行密钥？登录' : '创建通行密钥' }}
+        </button>
+        <div class="account-login-divider">
+          <span>或</span>
+        </div>
+        <button
+          class="account-email-button"
+          type="button"
+          :disabled="authStore.isAuthenticating"
+          @click="emailMode = 'sign-in'"
+        >
+          <van-icon name="envelop-o" size="18" />
+          使用邮箱验证码
         </button>
         <small>训练记录保存在本机</small>
       </template>
@@ -389,7 +546,8 @@ p {
 }
 
 .account-feature-note,
-.account-message {
+.account-message,
+.account-security-card {
   width: 100%;
   margin-bottom: 16px;
   padding: 12px 14px;
@@ -398,6 +556,48 @@ p {
   color: #44617e;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.account-security-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  background: #f7f7f9;
+}
+
+.account-security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.account-security-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #3a3a3c;
+  font-weight: 600;
+}
+
+.account-security-row small {
+  overflow: hidden;
+  color: #6e6e73;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-security-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #eaf4ff;
+  color: #2876c7;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .account-feature-note {
@@ -443,7 +643,8 @@ p {
 
 .account-primary-button,
 .account-secondary-button,
-.account-sync-button {
+.account-sync-button,
+.account-email-button {
   display: flex;
   width: 100%;
   min-height: 48px;
@@ -455,6 +656,36 @@ p {
   font: inherit;
   font-size: 15px;
   font-weight: 600;
+}
+
+.account-email-button {
+  background: #eaf4ff;
+  color: #2876c7;
+}
+
+.account-login-divider {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  margin: 10px 0;
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.account-login-divider::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(60, 60, 67, 0.14);
+  content: '';
+}
+
+.account-login-divider span {
+  position: relative;
+  padding: 0 10px;
+  background: #fff;
 }
 
 .account-sync-decision {
@@ -507,6 +738,8 @@ p {
 .account-primary-button:disabled,
 .account-secondary-button:disabled,
 .account-sync-button:disabled,
+.account-email-button:disabled,
+.account-security-button:disabled,
 .account-text-button:disabled {
   opacity: 0.5;
 }
@@ -551,9 +784,32 @@ small {
   }
 
   .account-feature-note,
-  .account-message {
+  .account-message,
+  .account-security-card {
     background: #2c2c2e;
     color: #d1d1d6;
+  }
+
+  .account-security-row span {
+    color: #fff;
+  }
+
+  .account-security-row small {
+    color: #aeaeb2;
+  }
+
+  .account-security-button,
+  .account-email-button {
+    background: rgba(10, 132, 255, 0.16);
+    color: #64a9f3;
+  }
+
+  .account-login-divider::before {
+    background: rgba(235, 235, 245, 0.16);
+  }
+
+  .account-login-divider span {
+    background: #1c1c1e;
   }
 
   .account-feature-note--synced {

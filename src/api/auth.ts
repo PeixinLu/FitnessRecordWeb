@@ -1,20 +1,18 @@
 import { passkeyClient } from '@better-auth/passkey/client'
 import { createAuthClient } from 'better-auth/client'
+import {
+  authOrigin,
+  getCurrentUser as requestCurrentUser,
+} from '@/api/email-auth'
+import type { CurrentUser } from '@/api/auth-types'
 
-export const authOrigin = import.meta.env.DEV
-  ? 'http://localhost:8787'
-  : window.location.origin
+export { authOrigin }
+export type { CurrentUser } from '@/api/auth-types'
 
 export const authClient = createAuthClient({
   baseURL: authOrigin,
   plugins: [passkeyClient()],
 })
-
-export interface CurrentUser {
-  id: string
-  nickname: string
-  image: string | null
-}
 
 interface AuthClientError {
   code?: string
@@ -77,13 +75,16 @@ export function isPasskeyCancellation(error: unknown): boolean {
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const response = await fetch(`${authOrigin}/api/me`, {
-    credentials: 'include',
-  })
-  if (response.status === 401) return null
-  if (!response.ok) throw await readRequestError(response, 'SESSION_REQUEST_FAILED')
-  const body = await response.json() as { user: CurrentUser }
-  return body.user
+  try {
+    return await requestCurrentUser()
+  } catch (error) {
+    if (
+      error instanceof Error
+      && 'status' in error
+      && error.status === 401
+    ) return null
+    throw error
+  }
 }
 
 export async function registerPasskey(): Promise<CurrentUser | null> {

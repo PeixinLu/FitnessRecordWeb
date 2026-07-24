@@ -37,6 +37,12 @@ export function getAccountPreview(): AccountPreview | null {
       id: 'development-preview',
       nickname: '训练玩家',
       image: null,
+      email: 't***@example.com',
+      emailVerified: true,
+      authMethods: {
+        passkey: true,
+        email: true,
+      },
     },
     tone: value,
     ...previewCopy[value],
