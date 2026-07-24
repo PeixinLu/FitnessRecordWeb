@@ -21,6 +21,8 @@ import {
 } from '@/utils/weightProfile'
 import EquipmentEmptyState from '@/components/EquipmentEmptyState.vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
+import CheckIcon from '@/components/icons/CheckIcon.vue'
+import SortIcon from '@/components/icons/SortIcon.vue'
 
 const props = defineProps<{
   embedded?: boolean
@@ -514,6 +516,24 @@ const exerciseSortListRef = ref<HTMLElement | null>(null)
 let equipmentSortable: Sortable | null = null
 let exerciseSortable: Sortable | null = null
 let flipTimer: ReturnType<typeof setTimeout> | null = null
+const sortEntryExpanded = ref(false)
+let sortEntryCollapseTimer: ReturnType<typeof setTimeout> | null = null
+
+function revealSortEntry(): void {
+  if (!props.embedded) return
+  if (sortEntryCollapseTimer) clearTimeout(sortEntryCollapseTimer)
+  sortEntryExpanded.value = true
+  sortEntryCollapseTimer = setTimeout(() => {
+    sortEntryExpanded.value = false
+    sortEntryCollapseTimer = null
+  }, 1800)
+}
+
+watch(
+  () => props.targetRequestKey,
+  () => revealSortEntry(),
+  { immediate: true, flush: 'post' },
+)
 
 const sortEquipmentItems = computed(() => equipmentOrderDraft.value
   .map(id => exerciseStore.equipments.find(equipment => equipment.id === id))
@@ -670,6 +690,7 @@ watch(selectedSortEquipmentId, async () => {
 onUnmounted(() => {
   destroySortables()
   if (flipTimer) clearTimeout(flipTimer)
+  if (sortEntryCollapseTimer) clearTimeout(sortEntryCollapseTimer)
   emit('flip-animation-change', '')
   emit('flip-state-change', false)
 })
@@ -710,11 +731,12 @@ onUnmounted(() => {
         v-else
         v-smooth-corners="22"
         class="sort-entry-btn"
+        :class="{ 'sort-entry-btn--expanded': sortEntryExpanded }"
         @click="startSortMode"
         aria-label="整理顺序"
       >
-        <van-icon name="bars" size="18" color="#8e8e93" />
-        <span>排序</span>
+        <SortIcon />
+        <span class="sort-entry-label">排序</span>
       </button>
       <h2 class="popup-title">{{ sortMode ? '整理顺序' : '器械动作管理' }}</h2>
       <button
@@ -724,7 +746,7 @@ onUnmounted(() => {
         @click="exitSortMode"
         aria-label="完成"
       >
-        <van-icon name="success" size="18" color="#fff" />
+        <CheckIcon />
       </button>
       <button
         v-else
@@ -733,7 +755,7 @@ onUnmounted(() => {
         @click="onNavBack"
         aria-label="完成"
       >
-        <van-icon name="success" size="18" color="#fff" />
+        <CheckIcon />
       </button>
     </header>
 
@@ -1047,7 +1069,7 @@ onUnmounted(() => {
             @click="saveEquipment"
             aria-label="确认"
           >
-            <van-icon name="success" size="18" color="#fff" />
+            <CheckIcon />
           </button>
         </div>
         <input
@@ -1139,7 +1161,7 @@ onUnmounted(() => {
           @click="saveExercise"
           aria-label="确认"
         >
-          <van-icon name="success" size="18" color="#fff" />
+          <CheckIcon />
         </button>
       </template>
 
@@ -1320,21 +1342,46 @@ onUnmounted(() => {
   top: 50%;
   transform: translateY(-50%);
   height: 44px;
-  padding: 0 14px;
+  width: 44px;
+  padding: 0 13px;
   border: none;
   border-radius: 22px;
   background: #f5f5f7;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0;
   color: #3a3a3c;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s ease;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    gap 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.15s ease;
+}
+
+.sort-entry-btn--expanded {
+  width: 84px;
+  gap: 6px;
+}
+
+.sort-entry-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease;
+}
+
+.sort-entry-btn--expanded .sort-entry-label {
+  max-width: 2.5em;
+  opacity: 1;
 }
 
 .sort-entry-btn:active {

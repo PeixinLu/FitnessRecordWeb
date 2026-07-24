@@ -5,6 +5,7 @@ import { useRecordStore } from "@/stores/record";
 import SetPicker from "@/components/SetPicker.vue";
 import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
+import RecordSettingsIcon from "@/components/icons/RecordSettingsIcon.vue";
 import { showToast } from "vant";
 import { getTemplateFields, type TemplateFieldKey } from "@/utils/dataTemplate";
 import { getWeightValues } from "@/utils/weightProfile";
@@ -199,13 +200,14 @@ function closeDrawer() {
             <h2 class="equipment-title">{{ currentEquipment?.name }}</h2>
             <button
               class="header-icon-btn"
+              aria-label="管理器械和动作"
               @click="emit(
                 'open-equipment-management',
                 props.equipmentId,
                 selectedExerciseId || undefined,
               )"
             >
-              <van-icon name="setting-o" size="20" />
+              <RecordSettingsIcon />
             </button>
           </header>
 

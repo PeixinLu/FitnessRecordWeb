@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from "vue"
 import { useExerciseStore } from "@/stores/exercise"
 import { showConfirmDialog, showToast } from "vant"
 import ImmersivePopup from "@/components/ImmersivePopup.vue"
+import CheckIcon from "@/components/icons/CheckIcon.vue"
 import { getTemplateLabel } from "@/utils/dataTemplate"
 import type { Exercise, MuscleGroup, DataTemplate } from "@/types"
 
@@ -229,7 +230,7 @@ async function removeExercise(id: string) {
           @click="saveExercise"
           aria-label="保存"
         >
-          <van-icon name="success" size="18" color="#fff" />
+          <CheckIcon />
         </button>
       </div>
     </div>

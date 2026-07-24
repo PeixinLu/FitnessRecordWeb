@@ -5,6 +5,7 @@ import hipAdductorIcon from '@/assets/icons/equipment-hip-adductor.svg'
 import latPulldownIcon from '@/assets/icons/equipment-lat-pulldown.svg'
 import cableMachineIcon from '@/assets/icons/equipment-cable-machine.svg'
 import rowingMachineIcon from '@/assets/icons/equipment-rowing-machine.svg'
+import genericEquipmentIcon from '@/assets/icons/equipment-generic.svg'
 
 export const EQUIPMENT_ICON_SLUGS: Record<string, string> = {
   'butterfly-machine': butterflyMachineIcon,
@@ -23,5 +24,5 @@ export function hasEquipmentIcon(icon?: string): boolean {
 export function getEquipmentIcon(icon?: string): string | undefined {
   return icon && Object.hasOwn(EQUIPMENT_ICON_SLUGS, icon)
     ? EQUIPMENT_ICON_SLUGS[icon]
-    : undefined
+    : genericEquipmentIcon
 }
