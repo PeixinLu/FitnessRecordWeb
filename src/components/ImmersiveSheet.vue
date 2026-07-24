@@ -586,4 +586,33 @@ onBeforeUnmount(() => {
     transition-duration: 0.01ms;
   }
 }
+
+@media (prefers-color-scheme: dark) {
+  .immersive-sheet-click-layer {
+    background: rgba(0, 0, 0, 0.32);
+  }
+
+  .immersive-sheet-frame--prominent {
+    --sheet-frame-shadow:
+      0 20px 32px rgba(0, 0, 0, 0.48),
+      0 4px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .immersive-sheet-panel {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: #1c1c1e;
+  }
+
+  .immersive-sheet-frost {
+    background: rgba(28, 28, 30, 0.78);
+  }
+
+  .immersive-sheet-header-title {
+    color: #f5f5f7;
+  }
+
+  .immersive-sheet-recessed-scrim {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
 </style>

@@ -2127,7 +2127,7 @@ onUnmounted(() => {
   }
 
   .management-page--embedded {
-    background: #2c2c2e;
+    background: #1c1c1e;
   }
 
   .popup-title {
@@ -2204,11 +2204,11 @@ onUnmounted(() => {
 
   .equipment-card {
     background: #2c2c2e;
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .equipment-card--expanded {
-    background: #2c2c2e;
+    background: #303033;
   }
 
   .equipment-icon {
@@ -2219,12 +2219,25 @@ onUnmounted(() => {
     color: #fff;
   }
 
+  .equipment-count,
+  .exercise-meta,
+  .case-count,
+  .case-added-label,
+  .sort-hint,
+  .sort-equipment-select-wrap {
+    color: #aeaeb2;
+  }
+
+  .case-hint {
+    color: #8e8e93;
+  }
+
   .equipment-card--ghost {
     background: rgba(10, 132, 255, 0.12) !important;
   }
 
   .exercise-item {
-    background: #3a3a3c;
+    background: #38383a;
   }
 
   .exercise-item:active {
@@ -2247,7 +2260,7 @@ onUnmounted(() => {
 
   .case-card {
     background: #2c2c2e;
-    border-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .case-card:active {
@@ -2268,6 +2281,39 @@ onUnmounted(() => {
 
   .editor-input {
     color: #fff;
+  }
+
+  .editor-input::placeholder {
+    color: #636366;
+  }
+
+  .weight-profile-editor {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .weight-profile-heading {
+    color: #f5f5f7;
+  }
+
+  .weight-profile-heading small,
+  .weight-custom-field small,
+  .weight-profile-note {
+    color: #aeaeb2;
+  }
+
+  .weight-step-fields label {
+    color: #aeaeb2;
+  }
+
+  .weight-step-fields input,
+  .weight-custom-field textarea {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: #2c2c2e;
+    color: #f5f5f7;
+  }
+
+  .weight-custom-field textarea::placeholder {
+    color: #636366;
   }
 
   .editor-confirm-btn {

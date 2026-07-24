@@ -773,6 +773,19 @@ small {
     background: #2c2c2e;
   }
 
+  .account-avatar {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, #24364a, #18283a);
+    color: #64a9f3;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .account-avatar--signed-in {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(145deg, #1674d1, #064b91);
+    color: #fff;
+  }
+
   .account-close,
   p,
   small {

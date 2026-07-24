@@ -134,6 +134,35 @@ body,
 }
 
 @media (prefers-color-scheme: dark) {
+  :root {
+    --app-environment-color: #1c1c1e;
+  }
+
+  :root.immersive-popup-open {
+    --app-environment-color: #0d0d0f;
+    --app-surface-alpha: 0.72;
+  }
+
+  html.immersive-popup-open .primary-page-menu-capsule,
+  html.immersive-popup-open .primary-page-back-button,
+  html.immersive-popup-open .equipment-section,
+  html.immersive-popup-open .equipment-card,
+  html.immersive-popup-open .record-item,
+  html.immersive-popup-open .record-icon,
+  html.immersive-popup-open .exercise-record-card,
+  html.immersive-popup-open .exercise-record-icon,
+  html.immersive-popup-open .timeline-record-card,
+  html.immersive-popup-open .timeline-record-icon,
+  html.immersive-popup-open .records-view-switch button.active,
+  html.immersive-popup-open .records-share-button,
+  html.immersive-popup-open .history-view-switch button.active,
+  html.immersive-popup-open .history-share-button,
+  html.immersive-popup-open .calendar-card,
+  html.immersive-popup-open .today-button,
+  html.immersive-popup-open .calendar-view-switch button.active {
+    background: rgba(44, 44, 46, var(--app-surface-alpha));
+  }
+
   .pull-to-dismiss::before {
     background: rgba(235, 235, 245, 0.3);
   }
