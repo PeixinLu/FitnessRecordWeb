@@ -7,6 +7,8 @@ import {
 } from "@/utils/dataTemplate";
 import NumberWheelPicker from "@/components/NumberWheelPicker.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
+import { normalizeWeightValues } from "@/utils/weightProfile";
+import { buildWheelValues } from "@/utils/numberWheelMath";
 
 export interface EditableSetDetail {
   id: string;
@@ -21,6 +23,7 @@ type TemplateValues = Record<TemplateFieldKey, number>;
 const props = defineProps<{
   sets: EditableSetDetail[];
   fields: TemplateField[];
+  weightValues?: number[];
   contentPaddingTop?: number;
   contentPaddingBottom?: number;
 }>();
@@ -50,6 +53,13 @@ const originalValues = ref<TemplateValues>({
 const detailFields = computed(() =>
   props.fields.filter((field) => field.key !== "sets"),
 );
+const editorWeightValues = computed(() => {
+  if (!props.weightValues?.length) return undefined;
+  return normalizeWeightValues([
+    ...props.weightValues,
+    editingValues.value.weight,
+  ]);
+});
 
 const hasChanges = computed(() =>
   detailFields.value.some(
@@ -72,7 +82,7 @@ const editValue = computed<number[]>({
 
 function openEditor(detail: EditableSetDetail) {
   editingId.value = detail.id;
-  const initial = {
+  const original = {
     reps: 12,
     sets: 1,
     weight: 0,
@@ -80,8 +90,23 @@ function openEditor(detail: EditableSetDetail) {
     distance: 1,
     ...detail,
   };
-  editingValues.value = { ...initial };
-  originalValues.value = { ...initial };
+  const normalized = { ...original };
+  const weightField = detailFields.value.find((field) => field.key === "weight");
+  if (weightField && normalized.weight <= 0) {
+    const validWeights = props.weightValues?.length
+      ? props.weightValues
+      : buildWheelValues(weightField.range).filter((value) => value > 0);
+    if (validWeights.length) {
+      normalized.weight = validWeights.reduce((nearest, value) =>
+        Math.abs(value - normalized.weight) <
+        Math.abs(nearest - normalized.weight)
+          ? value
+          : nearest,
+      );
+    }
+  }
+  editingValues.value = normalized;
+  originalValues.value = original;
   showEditor.value = true;
 }
 
@@ -153,6 +178,9 @@ function saveEditor() {
             :count="detailFields.length"
             :units="detailFields.map((field) => field.unit)"
             :ranges="detailFields.map((field) => field.range)"
+            :values="detailFields.map((field) =>
+              field.key === 'weight' ? editorWeightValues : undefined
+            )"
           />
         </div>
       </div>

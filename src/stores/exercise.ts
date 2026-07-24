@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db, initDefaultData } from '@/db/database'
-import type { Equipment, Exercise, MuscleGroup, DataTemplate } from '@/types'
+import type {
+  DataTemplate,
+  Equipment,
+  Exercise,
+  MuscleGroup,
+  WeightProfile,
+} from '@/types'
 import { normalizeEquipmentName, type EquipmentCase } from '@/data/equipmentCases'
 import {
   addCaseEntitiesWithSync,
@@ -65,7 +71,7 @@ export const useExerciseStore = defineStore('exercise', () => {
     return crypto.randomUUID()
   }
 
-  async function addEquipment(name: string) {
+  async function addEquipment(name: string, weightProfile?: WeightProfile) {
     const normalizedName = normalizeEquipmentName(name)
     if (equipments.value.some(item => (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('器械名称已存在')
@@ -78,17 +84,22 @@ export const useExerciseStore = defineStore('exercise', () => {
       normalizedName,
       source: 'manual',
       order: maxOrder + 1,
+      weightProfile,
     })
     await loadData()
     return id
   }
 
-  async function updateEquipment(id: string, name: string) {
+  async function updateEquipment(
+    id: string,
+    name: string,
+    weightProfile?: WeightProfile,
+  ) {
     const normalizedName = normalizeEquipmentName(name)
     if (equipments.value.some(item => item.id !== id && (item.normalizedName ?? normalizeEquipmentName(item.name)) === normalizedName)) {
       throw new Error('器械名称已存在')
     }
-    await updateEquipmentWithSync(id, { name, normalizedName })
+    await updateEquipmentWithSync(id, { name, normalizedName, weightProfile })
     await loadData()
   }
 

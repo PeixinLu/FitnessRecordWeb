@@ -6,8 +6,19 @@ import Sortable from 'sortablejs'
 import { useExerciseStore } from '@/stores/exercise'
 import { EQUIPMENT_CASES, normalizeEquipmentName, type EquipmentCase } from '@/data/equipmentCases'
 import { getEquipmentIcon } from '@/utils/equipmentIcon'
-import { MUSCLE_GROUPS, type DataTemplate, type MuscleGroup, type Exercise } from '@/types'
+import {
+  MUSCLE_GROUPS,
+  type DataTemplate,
+  type Equipment,
+  type Exercise,
+  type MuscleGroup,
+  type WeightProfile,
+} from '@/types'
 import { DATA_TEMPLATE_OPTIONS, getTemplateLabel } from '@/utils/dataTemplate'
+import {
+  buildSteppedWeightValues,
+  normalizeWeightValues,
+} from '@/utils/weightProfile'
 import EquipmentEmptyState from '@/components/EquipmentEmptyState.vue'
 import ImmersiveSheet from '@/components/ImmersiveSheet.vue'
 
@@ -230,16 +241,65 @@ const showEquipmentEditor = ref(false)
 const editingEquipmentId = ref<string>()
 const equipmentName = ref('')
 const equipmentInputRef = ref<HTMLInputElement | null>(null)
+type WeightMode = 'default' | 'step' | 'custom'
+const equipmentWeightMode = ref<WeightMode>('default')
+const equipmentWeightMin = ref('2.5')
+const equipmentWeightMax = ref('100')
+const equipmentWeightStep = ref('2.5')
+const equipmentWeightList = ref('')
+
+const equipmentWeightPreview = computed(() => {
+  let values: number[] = []
+  if (equipmentWeightMode.value === 'step') {
+    values = buildSteppedWeightValues(
+      Number(equipmentWeightMin.value),
+      Number(equipmentWeightMax.value),
+      Number(equipmentWeightStep.value),
+    )
+  } else if (equipmentWeightMode.value === 'custom') {
+    values = normalizeWeightValues(parseWeightList(equipmentWeightList.value))
+  }
+  if (!values.length) return ''
+  const shown = values.slice(0, 8).join('、')
+  return values.length > 8 ? `${shown} 等 ${values.length} 档` : `${shown} kg`
+})
+
+function parseWeightList(input: string): number[] {
+  return input
+    .split(/[\s,，、]+/)
+    .filter(Boolean)
+    .map(value => Number(value))
+}
+
+function resetEquipmentWeightEditor(): void {
+  equipmentWeightMode.value = 'default'
+  equipmentWeightMin.value = '2.5'
+  equipmentWeightMax.value = '100'
+  equipmentWeightStep.value = '2.5'
+  equipmentWeightList.value = ''
+}
 
 function openCreateEquipment() {
   editingEquipmentId.value = undefined
   equipmentName.value = ''
+  resetEquipmentWeightEditor()
   showEquipmentEditor.value = true
 }
 
-function openEditEquipment(id: string, name: string) {
-  editingEquipmentId.value = id
-  equipmentName.value = name
+function openEditEquipment(equipment: Equipment) {
+  editingEquipmentId.value = equipment.id
+  equipmentName.value = equipment.name
+  resetEquipmentWeightEditor()
+  const profile = equipment.weightProfile
+  if (profile?.mode === 'step') {
+    equipmentWeightMode.value = 'step'
+    equipmentWeightMin.value = String(profile.min ?? profile.step ?? 1)
+    equipmentWeightMax.value = String(profile.max ?? 100)
+    equipmentWeightStep.value = String(profile.step ?? 1)
+  } else if (profile?.mode === 'custom') {
+    equipmentWeightMode.value = 'custom'
+    equipmentWeightList.value = (profile.values ?? []).join(', ')
+  }
   showEquipmentEditor.value = true
 }
 
@@ -254,11 +314,48 @@ async function saveEquipment() {
     showToast('请输入器械名称')
     return
   }
+  let weightProfile: WeightProfile | undefined
+  if (equipmentWeightMode.value === 'step') {
+    const min = Number(equipmentWeightMin.value)
+    const max = Number(equipmentWeightMax.value)
+    const step = Number(equipmentWeightStep.value)
+    const values = buildSteppedWeightValues(min, max, step)
+    if (
+      !equipmentWeightMin.value.trim()
+      || !equipmentWeightMax.value.trim()
+      || !equipmentWeightStep.value.trim()
+      || min <= 0
+      || !values.length
+    ) {
+      showToast('请检查最小值、最大值和间隔，最多支持 500 档')
+      return
+    }
+    weightProfile = { mode: 'step', min, max, step }
+  } else if (equipmentWeightMode.value === 'custom') {
+    const parsed = parseWeightList(equipmentWeightList.value)
+    const values = normalizeWeightValues(parsed)
+    if (
+      !values.length
+      || values.length > 500
+      || parsed.some(value => !Number.isFinite(value) || value <= 0)
+    ) {
+      showToast('请输入 1–500 个大于 0 的有效重量')
+      return
+    }
+    weightProfile = { mode: 'custom', values }
+  }
   try {
     if (editingEquipmentId.value) {
-      await exerciseStore.updateEquipment(editingEquipmentId.value, name)
+      await exerciseStore.updateEquipment(
+        editingEquipmentId.value,
+        name,
+        weightProfile,
+      )
     } else {
-      savedEquipmentRevealId = await exerciseStore.addEquipment(name)
+      savedEquipmentRevealId = await exerciseStore.addEquipment(
+        name,
+        weightProfile,
+      )
     }
     showEquipmentEditor.value = false
     showToast('已保存')
@@ -866,7 +963,7 @@ onUnmounted(() => {
               class="equipment-swipe-action equipment-swipe-edit"
               type="primary"
               text="编辑"
-              @click.stop="openEditEquipment(equipment.id, equipment.name)"
+              @click.stop="openEditEquipment(equipment)"
             />
             <van-button
               v-smooth-corners="14"
@@ -963,6 +1060,58 @@ onUnmounted(() => {
           enterkeyhint="done"
           @keyup.enter="saveEquipment"
         />
+
+        <div class="weight-profile-editor">
+          <div class="weight-profile-heading">
+            <span>重量档位</span>
+            <small>kg</small>
+          </div>
+          <div class="pill-group weight-mode-group">
+            <button
+              v-for="option in [
+                { value: 'default', label: '默认整数' },
+                { value: 'step', label: '固定间隔' },
+                { value: 'custom', label: '自定义' },
+              ]"
+              :key="option.value"
+              class="pill-btn"
+              :class="{ 'pill-btn--active': equipmentWeightMode === option.value }"
+              type="button"
+              @click="equipmentWeightMode = option.value as WeightMode"
+            >{{ option.label }}</button>
+          </div>
+
+          <div v-if="equipmentWeightMode === 'step'" class="weight-step-fields">
+            <label>
+              <span>最小值</span>
+              <input v-model="equipmentWeightMin" type="number" min="0.001" inputmode="decimal" />
+            </label>
+            <label>
+              <span>最大值</span>
+              <input v-model="equipmentWeightMax" type="number" min="0" inputmode="decimal" />
+            </label>
+            <label>
+              <span>间隔</span>
+              <input v-model="equipmentWeightStep" type="number" min="0.001" inputmode="decimal" />
+            </label>
+          </div>
+
+          <div v-else-if="equipmentWeightMode === 'custom'" class="weight-custom-field">
+            <textarea
+              v-model="equipmentWeightList"
+              rows="2"
+              placeholder="例如：4.5, 9, 13.5, 18, 22.5"
+            ></textarea>
+            <small>使用逗号或空格分隔，保存后会自动排序、去重</small>
+          </div>
+
+          <p v-if="equipmentWeightPreview" class="weight-preview">
+            预览：{{ equipmentWeightPreview }}
+          </p>
+          <p v-else-if="equipmentWeightMode === 'default'" class="weight-profile-note">
+            使用 1–200 kg 的整数档位
+          </p>
+        </div>
       </div>
     </ImmersiveSheet>
 
@@ -1816,6 +1965,92 @@ onUnmounted(() => {
   color: #c7c7cc;
   line-height: inherit;
   opacity: 1;
+}
+
+.weight-profile-editor {
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(60, 60, 67, 0.12);
+}
+
+.weight-profile-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: #1c1c1e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.weight-profile-heading small,
+.weight-custom-field small {
+  color: #8e8e93;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.weight-mode-group {
+  margin-top: 10px;
+}
+
+.weight-step-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.weight-step-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #8e8e93;
+  font-size: 12px;
+}
+
+.weight-step-fields input,
+.weight-custom-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(118, 118, 128, 0.08);
+  color: #1c1c1e;
+  font: inherit;
+}
+
+.weight-step-fields input {
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 16px;
+}
+
+.weight-custom-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.weight-custom-field textarea {
+  min-height: 64px;
+  padding: 10px 12px;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.weight-preview,
+.weight-profile-note {
+  margin: 10px 0 0;
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.weight-preview {
+  color: #007aff;
 }
 
 /* ===== Exercise editor card ===== */

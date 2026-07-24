@@ -6,6 +6,7 @@ import type { TemplateField, TemplateFieldKey } from '@/utils/dataTemplate'
 interface Props {
   fields: TemplateField[]
   values: Record<TemplateFieldKey, number>
+  weightValues?: number[]
 }
 
 const props = defineProps<Props>()
@@ -33,5 +34,6 @@ const pickerValue = computed({
     :count="fields.length"
     :units="fields.map(field => field.unit)"
     :ranges="fields.map(field => field.range)"
+    :values="fields.map(field => field.key === 'weight' ? weightValues : undefined)"
   />
 </template>

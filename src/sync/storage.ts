@@ -4,7 +4,14 @@ import {
   exerciseUpsertMutation,
   recordUpsertMutation,
 } from '@/repositories/fitnessRepository'
-import type { DataTemplate, Equipment, Exercise, MuscleGroup, WorkoutRecord } from '@/types'
+import type {
+  DataTemplate,
+  Equipment,
+  Exercise,
+  MuscleGroup,
+  WeightProfile,
+  WorkoutRecord,
+} from '@/types'
 import {
   syncProtocolVersion,
   type SyncChange,
@@ -35,6 +42,23 @@ function isOptionalNumber(value: unknown): boolean {
   return value === undefined || (typeof value === 'number' && Number.isFinite(value))
 }
 
+function isWeightProfile(value: unknown): value is WeightProfile {
+  if (!isRecord(value) || !['step', 'custom'].includes(String(value.mode))) {
+    return false
+  }
+  if (
+    !isOptionalNumber(value.min)
+    || !isOptionalNumber(value.max)
+    || !isOptionalNumber(value.step)
+  ) {
+    return false
+  }
+  return value.values === undefined || (
+    Array.isArray(value.values)
+    && value.values.every(item => typeof item === 'number' && Number.isFinite(item))
+  )
+}
+
 function validateCommonPayload(
   entity: SyncSnapshotEntity,
 ): Record<string, unknown> {
@@ -52,6 +76,7 @@ function decodeEquipment(entity: SyncSnapshotEntity): Equipment {
     || !isOptionalString(payload.normalizedName)
     || !isOptionalString(payload.icon)
     || !isOptionalNumber(payload.order)
+    || (payload.weightProfile !== undefined && !isWeightProfile(payload.weightProfile))
     || (payload.source !== undefined && !['manual', 'case'].includes(String(payload.source)))
   ) {
     throw new Error('SYNC_EQUIPMENT_INVALID')

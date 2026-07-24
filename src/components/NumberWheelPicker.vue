@@ -13,6 +13,7 @@ interface Props {
   count: number
   units: string[]
   ranges: WheelRange[]
+  values?: Array<number[] | undefined>
   modelValue: number[]
 }
 
@@ -25,6 +26,7 @@ interface ColumnState {
   lastTime: number
   velocity: number
   wheelTimer: number | undefined
+  moved: boolean
 }
 
 const props = defineProps<Props>()
@@ -42,22 +44,71 @@ const MIN_VELOCITY = 0.35
 const animatingColumns = reactive<Set<number>>(new Set())
 
 const wheelCount = computed(() => normalizeWheelCount(props.count))
+function getDecimalPlaces(value: number): number {
+  const text = String(value).toLowerCase()
+  if (text.includes('e-')) return Number(text.split('e-')[1])
+  return text.includes('.') ? text.split('.')[1].length : 0
+}
+
+const columns = computed(() =>
+  Array.from({ length: wheelCount.value }, (_, index) => {
+    const values = props.values?.[index]?.length
+      ? props.values[index]!
+      : buildWheelValues(props.ranges[index] ?? [0, 0])
+    return {
+      values,
+      unit: props.units[index] ?? '',
+    }
+  })
+)
+
 const normalizedValue = computed(() =>
   normalizeWheelModel({
     count: wheelCount.value,
     ranges: props.ranges,
     modelValue: props.modelValue,
+    values: props.values,
   })
 )
 
-const columns = computed(() =>
-  Array.from({ length: wheelCount.value }, (_, index) => ({
-    values: buildWheelValues(props.ranges[index] ?? [0, 0]),
-    unit: props.units[index] ?? '',
-  }))
-)
-
 const states = reactive<ColumnState[]>([])
+
+const visibleMetrics = computed(() =>
+  columns.value.map((column, index) => {
+    const fallbackIndex = Math.max(
+      0,
+      column.values.indexOf(normalizedValue.value[index]),
+    )
+    const selectedIndex = states[index]
+      ? getNearestIndex(
+        states[index].offset,
+        ITEM_HEIGHT,
+        column.values.length,
+      )
+      : fallbackIndex
+    const radius = Math.floor(VISIBLE_ITEMS / 2)
+    const visibleValues = column.values.slice(
+      Math.max(0, selectedIndex - radius),
+      Math.min(column.values.length, selectedIndex + radius + 1),
+    )
+    const precision = visibleValues.reduce(
+      (max, value) => Math.max(max, getDecimalPlaces(value)),
+      0,
+    )
+    const integerDigits = visibleValues.reduce(
+      (max, value) => Math.max(max, String(Math.trunc(value)).length),
+      1,
+    )
+    const fractionWidth = precision > 0
+      ? ` + ${(precision + 1) * 0.66}ch`
+      : ''
+
+    return {
+      precision,
+      width: `calc(${integerDigits}ch${fractionWidth} + 8px)`,
+    }
+  })
+)
 
 function createState(): ColumnState {
   return {
@@ -69,6 +120,7 @@ function createState(): ColumnState {
     lastTime: 0,
     velocity: 0,
     wheelTimer: undefined,
+    moved: false,
   }
 }
 
@@ -110,6 +162,17 @@ function emitValue() {
   const value = columns.value.map((column, index) => column.values[getSelectedIndex(index)] ?? 0)
   emit('update:modelValue', value)
   emit('change', value)
+}
+
+function formatValueParts(value: number, precision: number) {
+  if (precision === 0) {
+    return { integer: String(value), fraction: '' }
+  }
+  const [integer, fraction = ''] = value.toFixed(precision).split('.')
+  return {
+    integer,
+    fraction,
+  }
 }
 
 function snapColumn(index: number) {
@@ -158,6 +221,7 @@ function onTouchStart(index: number, event: TouchEvent) {
   state.lastY = state.startY
   state.lastTime = performance.now()
   state.velocity = 0
+  state.moved = false
 }
 
 function onTouchMove(index: number, event: TouchEvent) {
@@ -166,6 +230,7 @@ function onTouchMove(index: number, event: TouchEvent) {
 
   const currentY = event.touches[0].clientY
   const deltaY = currentY - state.startY
+  if (Math.abs(deltaY) > 5) state.moved = true
   const now = performance.now()
   const dt = now - state.lastTime
 
@@ -176,6 +241,20 @@ function onTouchMove(index: number, event: TouchEvent) {
   state.lastY = currentY
   state.lastTime = now
   state.offset = clampOffset(index, state.startOffset + deltaY)
+}
+
+function selectItem(columnIndex: number, valueIndex: number) {
+  const state = states[columnIndex]
+  if (state.moved) {
+    state.moved = false
+    return
+  }
+  animatingColumns.add(columnIndex)
+  state.offset = getOffsetForIndex(valueIndex, ITEM_HEIGHT)
+  emitValue()
+  window.setTimeout(() => {
+    animatingColumns.delete(columnIndex)
+  }, 180)
 }
 
 function onTouchEnd(index: number) {
@@ -206,7 +285,7 @@ function onWheel(index: number, event: WheelEvent) {
 }
 
 watch(
-  () => [props.count, props.units, props.ranges, props.modelValue] as const,
+  () => [props.count, props.units, props.ranges, props.values, props.modelValue] as const,
   () => {
     nextTick(syncOffsetsFromValue)
   },
@@ -226,39 +305,71 @@ watch(
       @touchcancel="onTouchEnd(index)"
       @wheel="onWheel(index, $event)"
     >
-      <div class="number-wheel-visual">
+      <div
+        class="number-wheel-visual"
+        :style="{ width: visibleMetrics[index].width }"
+      >
         <div class="number-wheel-highlight"></div>
         <div
           class="number-wheel-track"
           :class="{ animating: animatingColumns.has(index) }"
           :style="{ transform: `translateY(${states[index]?.offset ?? 0}px)` }"
         >
-          <div v-for="value in column.values" :key="value" class="number-wheel-item">
-            {{ value }}
+          <div
+            v-for="(value, valueIndex) in column.values"
+            :key="value"
+            class="number-wheel-item"
+            @click.stop="selectItem(index, valueIndex)"
+          >
+            <span class="number-wheel-value">
+              <span class="number-wheel-integer">
+                {{ formatValueParts(value, visibleMetrics[index].precision).integer }}
+              </span>
+              <span
+                v-if="visibleMetrics[index].precision > 0"
+                class="number-wheel-fraction"
+                :class="{ 'zero-fill': getDecimalPlaces(value) === 0 }"
+              >
+                <span class="number-wheel-decimal-point">.</span>
+                <span class="number-wheel-decimal-digits">
+                  {{ formatValueParts(value, visibleMetrics[index].precision).fraction }}
+                </span>
+              </span>
+            </span>
           </div>
         </div>
-        <span class="number-wheel-unit">{{ column.unit }}</span>
       </div>
+      <span class="number-wheel-unit">{{ column.unit }}</span>
     </div>
   </div>
 </template>
 
 <style scoped>
 .number-wheel-picker {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 12px;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
   height: calc(40px * var(--visible-items));
   user-select: none;
 }
 
 .number-wheel-column {
   position: relative;
-  width: 76px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+  width: auto;
   height: 100%;
   touch-action: none;
   cursor: ns-resize;
+  z-index: 1;
 }
 
 /* 边缘列触摸热区向外扩展，覆盖两侧留白 */
@@ -282,10 +393,14 @@ watch(
 /* 视觉容器 - 居中、定宽，承载渐变遮罩和溢位裁剪 */
 .number-wheel-visual {
   position: relative;
-  width: 76px;
+  flex: 0 0 auto;
+  min-width: calc(1ch + 8px);
   height: 100%;
   margin: 0 auto;
   overflow: hidden;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 24px;
+  transition: width 0.18s ease-out;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -309,20 +424,22 @@ watch(
 .number-wheel-highlight {
   position: absolute;
   top: 50%;
-  left: 4px;
-  width: 44px;
+  left: 50%;
+  width: 100%;
   height: 40px;
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
   border-top: 1px solid #e5e5ea;
   border-bottom: 1px solid #e5e5ea;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 24px;
   z-index: 0;
 }
 
 .number-wheel-track {
   position: absolute;
   top: 80px;
-  left: 4px;
-  width: 44px;
+  left: 0;
+  width: 100%;
   will-change: transform;
   z-index: 1;
 }
@@ -332,6 +449,7 @@ watch(
 }
 
 .number-wheel-item {
+  box-sizing: border-box;
   height: 40px;
   display: flex;
   align-items: center;
@@ -341,19 +459,55 @@ watch(
   font-size: 24px;
   font-weight: 600;
   line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.number-wheel-value {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.number-wheel-integer {
+  text-align: right;
+}
+
+.number-wheel-fraction {
+  display: inline-flex;
+  align-items: baseline;
+  color: #6b7280;
+  font-size: 0.66em;
+  font-weight: 500;
+  text-align: left;
+}
+
+.number-wheel-fraction.zero-fill {
+  color: #c4c7cc;
+}
+
+.number-wheel-decimal-point {
+  line-height: 1;
+}
+
+.number-wheel-decimal-digits {
+  line-height: 1;
 }
 
 .number-wheel-unit {
-  position: absolute;
-  top: 50%;
-  left: 52px;
-  transform: translateY(-50%);
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 40px;
   color: #a1a1aa;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
-  line-height: 40px;
+  line-height: 1;
   text-align: left;
-  z-index: 2;
+  white-space: nowrap;
   pointer-events: none;
 }
 
@@ -368,6 +522,14 @@ watch(
 
   .number-wheel-unit {
     color: #8e8e93;
+  }
+
+  .number-wheel-fraction {
+    color: #a1a1aa;
+  }
+
+  .number-wheel-fraction.zero-fill {
+    color: #636366;
   }
 }
 </style>

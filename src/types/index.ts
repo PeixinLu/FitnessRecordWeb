@@ -6,6 +6,15 @@ export interface Equipment {
   icon?: string
   source?: 'manual' | 'case'
   order?: number
+  weightProfile?: WeightProfile
+}
+
+export interface WeightProfile {
+  mode: 'step' | 'custom'
+  min?: number
+  max?: number
+  step?: number
+  values?: number[]
 }
 
 // 动作类型

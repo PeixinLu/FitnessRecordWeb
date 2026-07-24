@@ -19,7 +19,7 @@ const TEMPLATE_FIELDS: Record<DataTemplate, TemplateField[]> = {
   'weight-reps': [
     { key: 'reps', unit: '次', range: [1, 50] },
     { key: 'sets', unit: '组', range: [1, 10] },
-    { key: 'weight', unit: 'kg', range: [0, 200] },
+    { key: 'weight', unit: 'kg', range: [1, 200] },
   ],
   reps: [
     { key: 'reps', unit: '次', range: [1, 50] },

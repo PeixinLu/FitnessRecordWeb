@@ -3,13 +3,16 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { showConfirmDialog, showToast } from "vant";
 import { useRecordStore } from "@/stores/record";
+import { useExerciseStore } from "@/stores/exercise";
 import type { WorkoutRecord } from "@/types";
 import type { TemplateField } from "@/utils/dataTemplate";
+import { getWeightValues } from "@/utils/weightProfile";
 import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
 
 const route = useRoute();
 const router = useRouter();
 const recordStore = useRecordStore();
+const exerciseStore = useExerciseStore();
 const props = defineProps<{
   date?: string;
   exerciseId?: string;
@@ -37,6 +40,17 @@ const records = computed(() =>
 const exerciseName = computed(
   () => records.value[0]?.exerciseName ?? "训练详情",
 );
+const exercise = computed(() =>
+  exerciseStore.exercises.find((item) => item.id === exerciseId.value),
+);
+const equipment = computed(() =>
+  exerciseStore.equipments.find(
+    (item) => item.id === exercise.value?.equipmentId,
+  ),
+);
+const weightValues = computed(() =>
+  getWeightValues(equipment.value?.weightProfile),
+);
 function closeDetail() {
   if (props.embedded) {
     emit("close");
@@ -52,7 +66,7 @@ function onNestedEditorVisibility(visible: boolean) {
 
 const detailFields: TemplateField[] = [
   { key: "reps", unit: "次", range: [1, 50] },
-  { key: "weight", unit: "kg", range: [0, 200] },
+  { key: "weight", unit: "kg", range: [1, 200] },
 ];
 
 async function updateSet(id: string, changes: Partial<WorkoutRecord>) {
@@ -93,6 +107,7 @@ async function removeRecord(id: string) {
       <SetDetailsEditor
         :sets="records"
         :fields="detailFields"
+        :weight-values="weightValues"
         :content-padding-top="embedded ? headerSafeSpace : 0"
         :content-padding-bottom="embedded ? footerSafeSpace : 0"
         @update="updateSet"

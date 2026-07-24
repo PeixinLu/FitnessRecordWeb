@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import NumberWheelPicker from '@/components/NumberWheelPicker.vue'
 
-const workoutValue = ref([12, 4, 80])
+const workoutValue = ref([12, 4, 5])
 const singleValue = ref([5])
 const fourValue = ref([1, 10, 30, 60])
 
@@ -27,7 +27,8 @@ const fourText = computed(() => JSON.stringify(fourValue.value))
         v-model="workoutValue"
         :count="3"
         :units="['次', '组', 'kg']"
-        :ranges="[[1, 50], [1, 10], [0, 200]]"
+        :ranges="[[1, 50], [1, 10], [1, 200]]"
+        :values="[undefined, undefined, [2.5, 5, 7.5, 10]]"
       />
     </section>
 

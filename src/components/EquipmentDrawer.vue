@@ -7,6 +7,7 @@ import SetDetailsEditor from "@/components/SetDetailsEditor.vue";
 import ImmersiveSheet from "@/components/ImmersiveSheet.vue";
 import { showToast } from "vant";
 import { getTemplateFields, type TemplateFieldKey } from "@/utils/dataTemplate";
+import { getWeightValues } from "@/utils/weightProfile";
 
 interface Props {
   show: boolean;
@@ -30,6 +31,9 @@ const recordStore = useRecordStore();
 const currentEquipment = computed(() =>
   exerciseStore.equipments.find((e) => e.id === props.equipmentId),
 );
+const weightValues = computed(() =>
+  getWeightValues(currentEquipment.value?.weightProfile),
+);
 
 // 该器械下的动作列表
 const exerciseList = computed(() =>
@@ -49,7 +53,13 @@ const nestedEditorOpen = ref(false);
 type TemplateValues = Record<TemplateFieldKey, number>;
 
 function createDefaultValues(): TemplateValues {
-  return { reps: 12, sets: 4, weight: 0, duration: 30, distance: 1 };
+  return {
+    reps: 12,
+    sets: 4,
+    weight: weightValues.value?.[0] ?? 1,
+    duration: 30,
+    distance: 1,
+  };
 }
 
 const formValues = ref<TemplateValues>(createDefaultValues());
@@ -218,6 +228,7 @@ function closeDrawer() {
             <SetPicker
               :fields="templateFields"
               :values="formValues"
+              :weight-values="weightValues"
               @change="onPickerChange"
             />
           </section>
@@ -252,6 +263,7 @@ function closeDrawer() {
           <SetDetailsEditor
             :sets="setDetails"
             :fields="templateFields"
+            :weight-values="weightValues"
             @update="updateSet"
             @delete="deleteSet"
             @editor-visibility="onNestedEditorVisibility"
